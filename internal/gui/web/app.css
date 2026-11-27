@@ -162,3 +162,6 @@ tr.sum td { font-weight: 650; }
 
 .log { max-height: 220px; overflow: auto; font: 12px/1.5 Consolas, Menlo, monospace; background: var(--bg); padding: 10px; border-radius: 6px; margin: 10px 0 0; white-space: pre-wrap; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 13px; z-index: 10; max-width: 90vw; }
+.link { color: var(--accent); text-decoration: none; font-size: 12px; }
+.link:hover { text-decoration: underline; }
+.actions { flex-wrap: wrap; }

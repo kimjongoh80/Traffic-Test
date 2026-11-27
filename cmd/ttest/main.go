@@ -18,9 +18,10 @@ import (
 
 	"github.com/kimjongoh80/Traffic-Test/internal/engine"
 	"github.com/kimjongoh80/Traffic-Test/internal/gui"
+	"github.com/kimjongoh80/Traffic-Test/internal/report"
 )
 
-const version = "0.2.1"
+const version = "0.3.0"
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Traffic-Test %s - network traffic stress test
@@ -109,6 +110,8 @@ func runClient(args []string) {
 	lat := fs.Int("L", 100, "latency probe interval in ms (0 disables)")
 	perStream := fs.Bool("S", false, "show per-stream lines")
 	jsonOut := fs.String("json", "", "write full results as JSON to this file")
+	reportOut := fs.String("report", "", "write an HTML report to this file (open it and print to PDF)")
+	csvOut := fs.String("csv", "", "write per-interval results as CSV to this file")
 	_ = fs.Parse(args)
 	if *host == "" {
 		fs.Usage()
@@ -167,6 +170,23 @@ func runClient(args []string) {
 		}
 		fmt.Println("Results written to", *jsonOut)
 	}
+	if *reportOut != "" {
+		if err := writeFile(*reportOut, func(f *os.File) error {
+			return report.HTML(f, report.Input{ID: res.StartedAt.Format("20060102-150405"), Target: res.Server,
+				Result: res, Version: version, Verdict: engine.Evaluate(res, engine.Criteria{})})
+		}); err != nil {
+			fmt.Fprintln(os.Stderr, "error writing report:", err)
+			os.Exit(1)
+		}
+		fmt.Println("Report written to", *reportOut)
+	}
+	if *csvOut != "" {
+		if err := writeFile(*csvOut, func(f *os.File) error { return report.CSV(f, res) }); err != nil {
+			fmt.Fprintln(os.Stderr, "error writing csv:", err)
+			os.Exit(1)
+		}
+		fmt.Println("CSV written to", *csvOut)
+	}
 }
 
 func printHeader(p engine.TestParams) {
@@ -213,4 +233,16 @@ func printSummary(r *engine.Result) {
 	} else if l != nil {
 		fmt.Printf("  Latency   : no probe replies (UDP port %s blocked?)\n", "probe")
 	}
+}
+
+func writeFile(path string, fn func(*os.File) error) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if err := fn(f); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
 }

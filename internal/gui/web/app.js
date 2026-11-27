@@ -375,6 +375,9 @@
         `<tr><td>${CHECK_NAMES[c.name] || c.name}</td><td>${esc(c.limit)}</td><td>${esc(c.measured)}</td><td><span class="tag ${c.pass ? 'pass' : 'fail'}">${c.pass ? 'PASS' : 'FAIL'}</span></td></tr>`).join('')}</tbody></table>`
       : '';
     $('dlJson').onclick = () => { location.href = `/api/results/${rec.id}?download=1`; };
+    $('dlCsv').onclick = () => { location.href = `/api/results/${rec.id}/csv`; };
+    $('dlReport').onclick = () => { location.href = `/api/results/${rec.id}/report?download=1`; };
+    $('openReport').onclick = () => { window.open(`/api/results/${rec.id}/report`, '_blank'); };
     $('summaryBox').hidden = false;
     renderStreams();
     renderKpis();
@@ -464,17 +467,19 @@
     let list = [];
     try { list = await api('/api/results'); } catch { }
     const tb = $('historyTable').querySelector('tbody');
-    if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="muted">아직 저장된 결과가 없습니다.</td></tr>'; return; }
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="9" class="muted">아직 저장된 결과가 없습니다.</td></tr>'; return; }
     tb.innerHTML = list.map(r => {
       const tag = !r.evaluated ? '<span class="tag none">-</span>' : r.pass ? '<span class="tag pass">PASS</span>' : '<span class="tag fail">FAIL</span>';
       return `<tr data-id="${esc(r.id)}"><td>${fmtTime(r.created_at)}${r.stopped ? ' <span class="muted small">(중지)</span>' : ''}</td><td>${esc(r.target)}</td>` +
         `<td>${r.protocol.toUpperCase()} ${r.reverse ? 'Client' : 'Server'} ×${r.streams} · ${r.duration_sec.toFixed(0)}s</td>` +
         `<td>${fmtBits(r.bits_per_sec, true)}</td><td>${r.protocol === 'udp' ? fmtPct(r.loss_pct || 0) : '-'}</td><td>${r.rtt_ms ? fmtMs(r.rtt_ms) : '-'}</td>` +
-        `<td>${tag}</td><td><button class="icon-btn" data-del="${esc(r.id)}" title="삭제">✕</button></td></tr>`;
+        `<td>${tag}</td><td><a class="link" href="/api/results/${esc(r.id)}/report" target="_blank">보기</a> · <a class="link" href="/api/results/${esc(r.id)}/csv">CSV</a></td>` +
+        `<td><button class="icon-btn" data-del="${esc(r.id)}" title="삭제">✕</button></td></tr>`;
     }).join('');
   }
 
   $('historyTable').addEventListener('click', async e => {
+    if (e.target.closest('a')) return;
     const del = e.target.closest('[data-del]');
     if (del) {
       e.stopPropagation();

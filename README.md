@@ -4,7 +4,7 @@
 jperf/iperf를 참고했고, TCP·UDP 대역폭, 지연시간(RTT), 지터, 패킷 손실을 한 번에 측정합니다.
 목표 성능은 1G 기준, 25G까지 대응입니다. Windows와 macOS를 지원합니다.
 
-> 현재 단계: **1단계 측정 엔진(CLI)**, **2단계 웹 GUI** 완료. 보고서 출력(3단계), 패키징(4단계) 예정.
+> 현재 단계: 1단계 측정 엔진, 2단계 웹 GUI, 3단계 보고서 출력 완료. 패키징(4단계) 예정.
 
 ## 구성
 
@@ -45,6 +45,16 @@ build.bat       # Windows
 - **테스트 이력**: 결과는 실행 파일 옆 `results` 폴더에 JSON으로 자동 저장되고, 클릭하면 다시 볼 수 있습니다
 - **서버 로그**: 상대 PC에서 이 PC로 들어온 테스트 기록
 
+### 보고서
+
+테스트가 끝나면 결과 요약 아래 버튼으로 내보낼 수 있습니다. 이력 표의 **보기 · CSV** 링크로 지난 테스트도 내보낼 수 있습니다.
+
+| 형식 | 내용 |
+|---|---|
+| 보고서 (HTML → PDF) | 판정, 시험 정보, 결과 요약, 판정 항목, 그래프 4종, 스트림별·구간별 표. **PDF로 저장 / 인쇄** 버튼으로 A4 PDF 저장 |
+| CSV | 구간·스트림별 원본 수치. 엑셀에서 한글이 깨지지 않도록 UTF-8 BOM 포함 |
+| JSON | 전체 결과 원본 |
+
 GUI 옵션: `ttest gui -web 127.0.0.1:8080 -p 5210 -results <폴더> -no-browser -no-server`
 
 ## 명령줄 사용법
@@ -79,6 +89,8 @@ ttest client -c 192.168.1.10 -R --json result.json
 | `-L MS` | 지연시간 프로브 간격(ms), 0이면 끔 | 100 |
 | `-S` | 스트림별 결과도 출력 | 꺼짐 |
 | `--json FILE` | 전체 결과를 JSON으로 저장 | |
+| `--report FILE` | HTML 보고서 저장 (브라우저에서 열어 PDF로 저장) | |
+| `--csv FILE` | 구간별 결과를 CSV로 저장 | |
 
 ### server 옵션
 
@@ -124,6 +136,7 @@ ttest client -c 192.168.1.10 -R --json result.json
 cmd/ttest/          진입점 (GUI / server / client)
 internal/gui/       웹 GUI 서버, 결과 저장소
   web/              화면 (HTML/CSS/JS, 외부 라이브러리 없이 오프라인 동작)
+internal/report/    HTML 보고서(SVG 그래프), CSV 내보내기
 internal/engine/    측정 엔진 (CLI와 GUI가 공유)
   criteria.go       합격/불합격 판정
   protocol.go       제어 프로토콜, 테스트 설정

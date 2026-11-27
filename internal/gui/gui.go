@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/kimjongoh80/Traffic-Test/internal/engine"
+	"github.com/kimjongoh80/Traffic-Test/internal/report"
 )
 
 //go:embed web
@@ -407,6 +408,10 @@ func (a *App) handleResults(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) handleResult(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/api/results/")
+	if base, kind, ok := strings.Cut(id, "/"); ok {
+		a.handleExport(w, r, base, kind)
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
 		rec, err := a.store.get(id)
@@ -426,6 +431,40 @@ func (a *App) handleResult(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]bool{"ok": true})
 	default:
 		http.Error(w, "method not allowed", 405)
+	}
+}
+
+func (a *App) reportInput(rec *Record) report.Input {
+	return report.Input{ID: rec.ID, Target: rec.Target, Stopped: rec.Stopped, Result: rec.Result,
+		Criteria: rec.Criteria, Verdict: rec.Verdict, Version: a.opt.Version}
+}
+
+// handleExport serves /api/results/{id}/report (HTML, print to PDF) and
+// /api/results/{id}/csv. Add ?download=1 to save as a file.
+func (a *App) handleExport(w http.ResponseWriter, r *http.Request, id, kind string) {
+	rec, err := a.store.get(id)
+	if err != nil {
+		writeErr(w, 404, err)
+		return
+	}
+	dl := r.URL.Query().Get("download") == "1"
+	switch kind {
+	case "report":
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if dl {
+			w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="ttest-report-%s.html"`, id))
+		}
+		if err := report.HTML(w, a.reportInput(rec)); err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+	case "csv":
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="ttest-%s.csv"`, id))
+		if err := report.CSV(w, rec.Result); err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+	default:
+		http.NotFound(w, r)
 	}
 }
 
