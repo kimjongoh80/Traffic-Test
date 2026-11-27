@@ -20,6 +20,7 @@
     <span class="dot" id="srvDot"></span>
     <span id="srvText">연결 대기 상태 확인 중</span>
     <button class="btn small" id="srvToggle">-</button>
+    <button class="btn small" id="quitBtn" title="Traffic-Test 프로그램을 종료합니다">종료</button>
   </div>
 </header>
 
@@ -154,6 +155,7 @@
   </main>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div class="overlay" id="quitOverlay" hidden><div class="panel"><h2>Traffic-Test를 종료했습니다</h2><p class="muted">이 탭을 닫아도 됩니다. 다시 쓰려면 프로그램을 다시 실행하세요.</p></div></div>
 <script src="chart.js"></script>
 <script src="app.js"></script>
 </body>

@@ -72,6 +72,15 @@ func Run(opt Options) error {
 	if opt.WebAddr == "" {
 		opt.WebAddr = "127.0.0.1:8080"
 	}
+	// If Traffic-Test is already running, just bring its page up again.
+	if url, ok := runningInstance(opt.WebAddr); ok {
+		fmt.Println("Traffic-Test is already running:", url)
+		if opt.OpenBrowser {
+			openBrowser(url)
+			time.Sleep(time.Second)
+		}
+		return nil
+	}
 	st, err := openStore(opt.ResultsDir)
 	if err != nil {
 		return err
@@ -99,6 +108,31 @@ func Run(opt Options) error {
 		go openBrowser(url)
 	}
 	return http.Serve(ln, a.routes())
+}
+
+func runningInstance(addr string) (string, bool) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", false
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+	url := "http://" + net.JoinHostPort(host, port)
+	c := http.Client{Timeout: 700 * time.Millisecond}
+	resp, err := c.Get(url + "/api/status")
+	if err != nil {
+		return "", false
+	}
+	defer resp.Body.Close()
+	var st struct {
+		Version  string `json:"version"`
+		Hostname string `json:"hostname"`
+	}
+	if json.NewDecoder(resp.Body).Decode(&st) != nil || st.Hostname == "" {
+		return "", false
+	}
+	return url, true
 }
 
 func portOf(a net.Addr) string {
@@ -149,6 +183,7 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("/api/server/stop", a.post(a.handleServerStop))
 	mux.HandleFunc("/api/test/start", a.post(a.handleTestStart))
 	mux.HandleFunc("/api/test/stop", a.post(a.handleTestStop))
+	mux.HandleFunc("/api/quit", a.post(a.handleQuit))
 	mux.HandleFunc("/api/results", a.handleResults)
 	mux.HandleFunc("/api/results/", a.handleResult)
 	return mux
@@ -398,6 +433,27 @@ func (a *App) handleTestStop(w http.ResponseWriter, r *http.Request) {
 	}
 	a.testMu.Unlock()
 	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+// handleQuit stops the whole program (there is no window to close when it
+// was started from a double-click on macOS).
+func (a *App) handleQuit(w http.ResponseWriter, r *http.Request) {
+	a.testMu.Lock()
+	if a.cancel != nil {
+		a.cancel()
+	}
+	a.testMu.Unlock()
+	writeJSON(w, 200, map[string]bool{"ok": true})
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		a.srvMu.Lock()
+		if a.srv != nil {
+			a.srv.Close()
+		}
+		a.srvMu.Unlock()
+		fmt.Println("Traffic-Test stopped from the web page.")
+		os.Exit(0)
+	}()
 }
 
 // ---- results ----

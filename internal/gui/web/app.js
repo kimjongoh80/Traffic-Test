@@ -441,6 +441,19 @@
     refreshStatus();
   };
 
+  $('quitBtn').onclick = async () => {
+    const b = $('quitBtn');
+    if (!b.dataset.armed) {
+      b.dataset.armed = '1'; b.textContent = '정말 종료?'; b.classList.add('danger');
+      setTimeout(() => { delete b.dataset.armed; b.textContent = '종료'; b.classList.remove('danger'); }, 3000);
+      return;
+    }
+    try { await api('/api/quit', {}); } catch { }
+    quitting = true;
+    $('quitOverlay').hidden = false;
+  };
+  let quitting = false;
+
   // ---------- server status / history ----------
   const state = { server: null };
   function renderServer(s) {
@@ -536,6 +549,7 @@
       $('formErr').textContent = m.error;
     });
     es.onopen = () => refreshStatus();
+    es.onerror = () => { if (quitting) es.close(); };
   }
 
   // ---------- init ----------

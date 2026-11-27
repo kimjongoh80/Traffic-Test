@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traffic-Test 사용설명서</title>
+<style>
+  body { margin: 0; background: #f4f6f9; color: #18202b; font: 15px/1.7 "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; }
+  .doc { max-width: 860px; margin: 24px auto; background: #fff; padding: 40px 48px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 36px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #e4e7ec; }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  .sub { color: #667085; margin: 0 0 20px; }
+  code, kbd { font-family: Consolas, Menlo, monospace; background: #f2f4f7; padding: 1px 6px; border-radius: 4px; font-size: 13.5px; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.55; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { border: 1px solid #e4e7ec; padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: #f5f7fa; font-weight: 600; }
+  .tip, .warn { padding: 10px 14px; border-radius: 8px; margin: 12px 0; }
+  .tip { background: #eff6ff; border-left: 4px solid #2563eb; }
+  .warn { background: #fffbeb; border-left: 4px solid #d97706; }
+  ol li, ul li { margin: 3px 0; }
+  .diagram { font-family: Consolas, Menlo, monospace; background: #f8fafc; border: 1px solid #e4e7ec; border-radius: 8px; padding: 14px; text-align: center; white-space: pre; overflow-x: auto; font-size: 13px; }
+  nav ol { columns: 2; }
+  @media (max-width: 700px) { .doc { padding: 22px 16px; margin: 0; border-radius: 0; } nav ol { columns: 1; } }
+  @media print { body { background: #fff; } .doc { box-shadow: none; margin: 0; padding: 0; max-width: none; } h2 { break-after: avoid; } pre, table { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="doc">
+<h1>Traffic-Test 사용설명서</h1>
+<p class="sub">네트워크 장비 양 끝단에 PC를 연결해 TCP/UDP 대역폭, 지연시간, 지터, 패킷 손실을 측정하는 트래픽 스트레스 테스트 도구</p>
+
+<nav><ol>
+  <li><a href="#prepare">준비물과 구성</a></li>
+  <li><a href="#install">설치</a></li>
+  <li><a href="#firewall">방화벽 설정</a></li>
+  <li><a href="#run">테스트하기</a></li>
+  <li><a href="#settings">설정 항목</a></li>
+  <li><a href="#presets">프리셋</a></li>
+  <li><a href="#results">결과 보기와 판정</a></li>
+  <li><a href="#reports">보고서 내보내기</a></li>
+  <li><a href="#highspeed">10G / 25G 테스트</a></li>
+  <li><a href="#trouble">문제 해결</a></li>
+  <li><a href="#cli">명령줄 사용</a></li>
+</ol></nav>
+
+<h2 id="prepare">1. 준비물과 구성</h2>
+<ul>
+  <li>PC 2대 (Windows 10/11 또는 macOS 11 이상, 섞어서 써도 됩니다)</li>
+  <li>시험할 네트워크 장비 (스위치, 라우터, 방화벽, 회선 등)</li>
+  <li>두 PC에 Traffic-Test</li>
+</ul>
+<div class="diagram">[ PC A : Traffic-Test ] ── 시험 대상 장비 ── [ PC B : Traffic-Test ]
+      192.168.1.10                                      192.168.1.20</div>
+<p>두 PC 모두 같은 프로그램을 실행합니다. 어느 쪽에서든 테스트를 시작할 수 있습니다.</p>
+
+<h2 id="install">2. 설치</h2>
+<h3>Windows</h3>
+<ol>
+  <li><code>TrafficTest-버전-windows-x64.zip</code> 압축을 원하는 폴더에 풉니다. (ARM 노트북은 <code>windows-arm64</code>)</li>
+  <li><code>TrafficTest.exe</code>를 더블클릭합니다.</li>
+  <li>"Windows의 PC 보호" 창이 나오면 <b>추가 정보 → 실행</b>을 누릅니다.</li>
+  <li>검은 창과 함께 브라우저에 Traffic-Test 화면이 열립니다. 검은 창을 닫거나 화면의 <b>종료</b> 버튼을 누르면 프로그램이 끝납니다.</li>
+</ol>
+<h3>macOS</h3>
+<ol>
+  <li>Apple Silicon(M1 이상) Mac은 <code>macos-apple-silicon.zip</code>, Intel Mac은 <code>macos-intel.zip</code>을 받아 압축을 풉니다.</li>
+  <li><code>TrafficTest.app</code>을 응용 프로그램 폴더로 옮깁니다(선택).</li>
+  <li>처음 한 번은 앱을 <b>Control 키를 누른 채 클릭 → 열기</b>로 실행합니다. 서명되지 않은 앱이라 그냥 더블클릭하면 막힐 수 있습니다.
+    <br>그래도 막히면 <b>시스템 설정 → 개인정보 보호 및 보안</b> 아래쪽의 <b>그래도 열기</b>를 누릅니다.</li>
+  <li>"들어오는 네트워크 연결을 허용하겠습니까?"가 나오면 <b>허용</b>을 누릅니다.</li>
+  <li>브라우저에 화면이 열립니다. 끝낼 때는 화면 오른쪽 위 <b>종료</b> 버튼을 누릅니다.</li>
+</ol>
+<div class="tip">브라우저 창을 실수로 닫았다면 주소창에 <code>http://127.0.0.1:8080</code>을 입력하면 다시 열립니다. (8080을 다른 프로그램이 쓰고 있으면 8081, 8082… 순서로 바뀝니다. 검은 창에 주소가 표시됩니다.)</div>
+
+<h2 id="firewall">3. 방화벽 설정</h2>
+<p>상대 PC가 보내는 테스트 트래픽이 들어올 수 있게 <b>두 PC 모두</b> 방화벽을 열어야 합니다.</p>
+<table>
+  <tr><th>프로토콜</th><th>포트</th><th>용도</th></tr>
+  <tr><td>TCP</td><td>5210</td><td>제어 연결, TCP 테스트 데이터</td></tr>
+  <tr><td>UDP</td><td>5210</td><td>지연시간(RTT) 측정</td></tr>
+  <tr><td>UDP</td><td>5211 ~ 5210+스트림 수</td><td>UDP 테스트 데이터 (최대 5338)</td></tr>
+</table>
+<ul>
+  <li><b>Windows</b>: 함께 들어 있는 <code>Allow-Firewall.bat</code>을 더블클릭하고 관리자 권한을 허용합니다. 한 번만 하면 됩니다. 되돌릴 때는 <code>Remove-Firewall.bat</code>.</li>
+  <li><b>macOS</b>: 처음 실행할 때 나오는 연결 허용 창에서 <b>허용</b>을 누르면 됩니다.</li>
+  <li><b>시험 대상이 방화벽 장비</b>라면 장비 정책에도 위 포트를 열어 주세요.</li>
+</ul>
+
+<h2 id="run">4. 테스트하기</h2>
+<ol>
+  <li>두 PC에서 Traffic-Test를 실행합니다. 화면 오른쪽 위에 <b>연결 대기 중 (포트 5210)</b>이 초록색으로 보여야 합니다.</li>
+  <li>화면 맨 위 <b>이 PC</b> 옆에 표시된 IP를 확인합니다.</li>
+  <li>테스트를 시작할 PC에서 <b>상대 PC 주소</b>에 반대쪽 PC의 IP를 입력합니다.</li>
+  <li><b>Mode</b>를 고릅니다.
+    <ul>
+      <li><b>Server (송신)</b>: 이 PC가 트래픽을 <b>보냅니다</b>.</li>
+      <li><b>Client (수신)</b>: 상대 PC가 이 PC로 트래픽을 보내고, 이 PC가 <b>받습니다</b>.</li>
+    </ul>
+  </li>
+  <li>프리셋을 고르거나 프로토콜, 시간, 스트림을 설정하고 <b>테스트 시작</b>을 누릅니다.</li>
+  <li>진행 중에는 지표와 그래프가 1초마다 갱신됩니다. 중간에 멈추려면 <b>테스트 중지</b>를 누릅니다(그때까지의 결과는 저장됩니다).</li>
+</ol>
+<div class="tip">양방향 성능을 보려면 같은 설정으로 Mode만 바꿔 두 번 테스트하세요. 장비가 한쪽 방향에서만 느린 경우를 찾을 수 있습니다.</div>
+
+<h2 id="settings">5. 설정 항목</h2>
+<table>
+  <tr><th>항목</th><th>설명</th><th>기본값</th></tr>
+  <tr><td>프로토콜</td><td>TCP: 최대 처리량 확인. UDP: 지정한 속도로 보내며 손실·지터 확인</td><td>TCP</td></tr>
+  <tr><td>시간</td><td>테스트 시간(초). 안정성 확인은 600초 이상 권장</td><td>10</td></tr>
+  <tr><td>병렬 스트림</td><td>동시에 여는 연결 수. 1G는 1~4, 10G 이상은 4~8</td><td>1</td></tr>
+  <tr><td>목표 대역폭</td><td>보낼 전체 속도. TCP는 비우면 최대 속도, UDP는 비우면 1 Gbps</td><td>-</td></tr>
+  <tr><td>버퍼/패킷 크기</td><td>TCP 한 번에 쓰는 크기, UDP 패킷 데이터 크기(바이트)</td><td>TCP 128K, UDP 1460</td></tr>
+  <tr><td>RTT 측정 간격</td><td>지연시간 측정 패킷을 보내는 간격(ms). 0이면 측정 안 함</td><td>100</td></tr>
+</table>
+
+<h2 id="presets">6. 프리셋</h2>
+<table>
+  <tr><th>프리셋</th><th>내용</th><th>합격 기준</th></tr>
+  <tr><td>1G TCP 최대</td><td>TCP, 스트림 4, 최대 속도, 30초</td><td>평균 900 Mbps 이상</td></tr>
+  <tr><td>1G UDP 손실</td><td>UDP 950 Mbps, 30초</td><td>손실 0.01% 이하, 지터 1 ms 이하</td></tr>
+  <tr><td>10G TCP</td><td>TCP, 스트림 8, 최대 속도, 30초</td><td>평균 9 Gbps 이상</td></tr>
+  <tr><td>25G TCP</td><td>TCP, 스트림 8, 최대 속도, 30초</td><td>평균 23 Gbps 이상</td></tr>
+  <tr><td>25G UDP 점보</td><td>UDP 25 Gbps, 스트림 8, 패킷 8972, 30초</td><td>손실 0.1% 이하</td></tr>
+  <tr><td>지연 측정</td><td>UDP 10 Mbps(저부하), RTT 50 ms 간격, 60초</td><td>RTT 5 ms, 지터 1 ms 이하</td></tr>
+  <tr><td>장시간 안정성</td><td>TCP 800 Mbps, 스트림 4, 600초</td><td>평균 750 Mbps 이상</td></tr>
+</table>
+<p>프리셋을 누른 뒤 값을 바꿔도 됩니다. 마지막 설정은 자동으로 기억됩니다.</p>
+
+<h2 id="results">7. 결과 보기와 판정</h2>
+<table>
+  <tr><th>지표</th><th>의미</th></tr>
+  <tr><td>대역폭</td><td>받는 쪽에서 1초마다 측정한 실제 처리량. 평균·최소·최대 표시</td></tr>
+  <tr><td>지연시간 (RTT)</td><td>테스트 트래픽이 흐르는 동안 측정한 왕복 시간. 장비가 부하를 받을 때 지연이 얼마나 늘어나는지 보여 줍니다(평균, p95, 최대)</td></tr>
+  <tr><td>지터</td><td>UDP: 패킷 도착 간격의 흔들림(RFC 3550). TCP: RTT 변동</td></tr>
+  <tr><td>패킷 손실</td><td>UDP: 보낸 패킷 중 도착하지 않은 비율, 순서 뒤바뀜 포함. TCP는 재전송으로 손실이 보정되므로 RTT 측정 패킷의 손실률을 표시</td></tr>
+</table>
+<p><b>합격 기준</b>을 열고 최소 대역폭, 최대 손실, 최대 RTT, 최대 지터를 입력하면 그래프에 빨간 점선이 그려지고, 테스트가 끝나면 <b>PASS / FAIL</b>과 항목별 결과가 표시됩니다. 비워 둔 항목은 판정하지 않습니다.</p>
+<p>모든 결과는 자동 저장되고 <b>테스트 이력</b>에서 다시 열 수 있습니다.</p>
+<ul>
+  <li>Windows: 프로그램 폴더 안 <code>results</code> 폴더 (쓰기 권한이 없으면 <code>사용자 폴더\TrafficTest\results</code>)</li>
+  <li>macOS: <code>문서/TrafficTest/results</code></li>
+</ul>
+
+<h2 id="reports">8. 보고서 내보내기</h2>
+<table>
+  <tr><th>버튼</th><th>결과물</th></tr>
+  <tr><td>보고서 보기 / PDF</td><td>새 탭에 보고서가 열립니다. 오른쪽 위 <b>PDF로 저장 / 인쇄</b> → 프린터에서 <b>PDF로 저장</b>을 고르면 A4 PDF가 만들어집니다.</td></tr>
+  <tr><td>보고서 HTML 저장</td><td>보고서를 파일 하나로 저장합니다. 메일로 보내도 그대로 열립니다.</td></tr>
+  <tr><td>CSV 저장 (엑셀)</td><td>1초 단위·스트림별 원본 수치. 엑셀에서 바로 열립니다.</td></tr>
+  <tr><td>JSON 저장</td><td>전체 결과 원본 데이터</td></tr>
+</table>
+<p>이력 표의 <b>보기 · CSV</b> 링크로 지난 테스트도 내보낼 수 있습니다.</p>
+
+<h2 id="highspeed">9. 10G / 25G 테스트</h2>
+<ul>
+  <li>TCP는 병렬 스트림을 <b>4~8</b>로 늘리세요. 스트림 1개로는 PC 성능 때문에 회선 속도를 다 못 쓸 수 있습니다.</li>
+  <li>UDP 고속 테스트는 초당 패킷 수가 한계가 됩니다. 장비와 양쪽 NIC에서 <b>점보 프레임(MTU 9000)</b>을 켜고 패킷 크기를 <b>8972</b>로 설정하세요(25G UDP 점보 프리셋).</li>
+  <li>양쪽 PC의 NIC, PCIe 슬롯, CPU가 결과에 영향을 줍니다. 장비 없이 두 PC를 직접 연결해 기준 성능을 먼저 재 두면 장비 성능을 판단하기 쉽습니다.</li>
+  <li>노트북은 전원 연결, 고성능 모드에서 테스트하세요.</li>
+</ul>
+
+<h2 id="trouble">10. 문제 해결</h2>
+<table>
+  <tr><th>증상</th><th>확인할 것</th></tr>
+  <tr><td>"cannot connect to server"</td><td>상대 PC에서 Traffic-Test가 실행 중이고 <b>연결 대기 중</b>인지, IP가 맞는지, 상대 PC 방화벽(TCP 5210)이 열렸는지 확인하세요. 상대 PC에서 <code>ping</code>이 되는지도 확인하세요.</td></tr>
+  <tr><td>"no UDP packets reached the server"</td><td>UDP 5211 이상 포트가 방화벽이나 시험 장비에서 막혀 있습니다.</td></tr>
+  <tr><td>RTT가 "-"로 나옴</td><td>UDP 5210이 막혀 있습니다. 대역폭 측정에는 영향이 없습니다.</td></tr>
+  <tr><td>"server is busy"</td><td>상대 PC가 이미 다른 테스트를 하고 있습니다. 끝난 뒤 다시 시도하세요.</td></tr>
+  <tr><td>UDP 손실이 높음</td><td>목표 대역폭이 회선 속도보다 높지 않은지 확인하세요. 1G 회선이면 950 Mbps 이하가 적당합니다. 받는 PC의 CPU 사용률도 확인하세요.</td></tr>
+  <tr><td>속도가 기대보다 낮음</td><td>병렬 스트림을 늘리고, 링크 속도(1G/10G 협상), 케이블, 이중(Duplex) 설정을 확인하세요.</td></tr>
+  <tr><td>"포트 5210 사용 중" 오류</td><td>Traffic-Test가 이미 실행 중이거나 다른 프로그램이 포트를 쓰고 있습니다. 실행 중인 Traffic-Test를 종료하세요.</td></tr>
+</table>
+
+<h2 id="cli">11. 명령줄 사용</h2>
+<p>스크립트나 원격 접속 환경에서는 명령줄로도 쓸 수 있습니다. (macOS는 zip 안의 <code>ttest</code> 파일)</p>
+<pre># 한쪽 PC: 대기
+TrafficTest.exe server
+
+# 반대쪽 PC: TCP 30초, 스트림 4, 보고서와 CSV 저장
+TrafficTest.exe client -c 192.168.1.10 -t 30 -P 4 --report report.html --csv result.csv
+
+# UDP 1 Gbps, 상대 PC가 보내고 이 PC가 받기(-R)
+TrafficTest.exe client -c 192.168.1.10 -u -b 1G -R</pre>
+<p>전체 옵션은 <code>TrafficTest.exe client -h</code>로 볼 수 있습니다.</p>
+</div>
+</body>
+</html>

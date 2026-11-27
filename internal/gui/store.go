@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -72,7 +73,15 @@ type store struct {
 }
 
 func defaultResultsDir() string {
-	if exe, err := os.Executable(); err == nil {
+	exe, exeErr := os.Executable()
+	// Never write inside a macOS .app bundle; use ~/Documents instead.
+	inBundle := exeErr == nil && strings.Contains(exe, ".app/Contents/MacOS")
+	if inBundle {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, "Documents", "TrafficTest", "results")
+		}
+	}
+	if exe, err := exe, exeErr; err == nil {
 		d := filepath.Join(filepath.Dir(exe), "results")
 		if os.MkdirAll(d, 0o755) == nil {
 			if f, err := os.CreateTemp(d, ".w"); err == nil {

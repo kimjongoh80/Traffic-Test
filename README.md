@@ -4,7 +4,8 @@
 jperf/iperf를 참고했고, TCP·UDP 대역폭, 지연시간(RTT), 지터, 패킷 손실을 한 번에 측정합니다.
 목표 성능은 1G 기준, 25G까지 대응입니다. Windows와 macOS를 지원합니다.
 
-> 현재 단계: 1단계 측정 엔진, 2단계 웹 GUI, 3단계 보고서 출력 완료. 패키징(4단계) 예정.
+> 1단계 측정 엔진, 2단계 웹 GUI, 3단계 보고서 출력, 4단계 Windows·mac 패키징 완료.
+> 자세한 사용법은 [사용설명서](packaging/UserGuide.html)를 보세요. (배포 zip에도 들어 있습니다)
 
 ## 구성
 
@@ -16,7 +17,28 @@ jperf/iperf를 참고했고, TCP·UDP 대역폭, 지연시간(RTT), 지터, 패�
 - **client**: 반대쪽 PC에서 테스트를 시작하고 결과를 출력합니다.
 - 기본은 client → server 방향 전송, `-R` 옵션으로 server → client(역방향) 전송.
 
+## 내려받기 / 설치
+
+| 파일 | 대상 |
+|---|---|
+| `TrafficTest-<버전>-windows-x64.zip` | 일반 Windows 10/11 PC |
+| `TrafficTest-<버전>-windows-arm64.zip` | ARM Windows 노트북 |
+| `TrafficTest-<버전>-macos-apple-silicon.zip` | M1 이상 Mac |
+| `TrafficTest-<버전>-macos-intel.zip` | Intel Mac |
+
+- **Windows**: 압축을 풀고 `TrafficTest.exe` 실행. `Allow-Firewall.bat`을 한 번 실행해 방화벽을 엽니다.
+- **macOS**: 압축을 풀고 `TrafficTest.app`을 **Control+클릭 → 열기**로 처음 실행합니다(서명되지 않은 앱). 명령줄용 `ttest`도 함께 들어 있습니다.
+- 끝낼 때는 화면 오른쪽 위 **종료** 버튼. 이미 실행 중일 때 다시 실행하면 기존 화면을 다시 엽니다.
+
+GitHub Actions가 push마다 테스트와 패키지 빌드를 하고, `v0.4.0`처럼 태그를 push하면 GitHub Release에 zip을 올립니다.
+
 ## 빌드
+
+패키지 만들기 (zip 4종, `dist/`): `./scripts/package.sh` (Go, zip, [go-winres](https://github.com/tc-hib/go-winres) 필요)
+
+테스트: `go test ./...`
+
+실행 파일만 빠르게 만들기:
 
 Go 1.22 이상이 필요합니다.
 
@@ -138,6 +160,8 @@ internal/gui/       웹 GUI 서버, 결과 저장소
   web/              화면 (HTML/CSS/JS, 외부 라이브러리 없이 오프라인 동작)
 internal/report/    HTML 보고서(SVG 그래프), CSV 내보내기
 internal/engine/    측정 엔진 (CLI와 GUI가 공유)
+packaging/          아이콘, Windows 리소스, mac Info.plist, 방화벽 스크립트, 사용설명서
+scripts/package.sh  배포 zip 생성
   criteria.go       합격/불합격 판정
   protocol.go       제어 프로토콜, 테스트 설정
   server.go         서버

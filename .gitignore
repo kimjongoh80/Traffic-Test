@@ -1,4 +1,5 @@
 /dist/
+/cmd/ttest/rsrc_windows_*.syso
 *.exe
 /ttest
 *.json.out

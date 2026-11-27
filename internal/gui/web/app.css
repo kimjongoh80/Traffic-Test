@@ -30,6 +30,7 @@
   --shadow: none; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
   background: var(--bg); color: var(--text);
@@ -165,3 +166,5 @@ tr.sum td { font-weight: 650; }
 .link { color: var(--accent); text-decoration: none; font-size: 12px; }
 .link:hover { text-decoration: underline; }
 .actions { flex-wrap: wrap; }
+.overlay { position: fixed; inset: 0; background: color-mix(in srgb, var(--bg) 85%, transparent); display: grid; place-items: center; z-index: 20; padding: 16px; }
+.overlay .panel { max-width: 420px; text-align: center; }

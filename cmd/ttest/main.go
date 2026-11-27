@@ -21,7 +21,8 @@ import (
 	"github.com/kimjongoh80/Traffic-Test/internal/report"
 )
 
-const version = "0.3.0"
+// version is overridden at build time with -ldflags "-X main.version=..."
+var version = "0.4.0"
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Traffic-Test %s - network traffic stress test
