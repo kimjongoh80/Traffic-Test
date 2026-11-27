@@ -153,11 +153,12 @@ func (s *Server) handleControl(raw net.Conn) error {
 		_ = cc.send(ctrlMsg{Type: "error", Error: err.Error()})
 		return err
 	}
-	dir := "client->server"
+	// Described from this (listening) PC's point of view.
+	dir := "peer sends, this PC receives"
 	if p.Reverse {
-		dir = "server->client"
+		dir = "this PC sends, peer receives"
 	}
-	s.logf("test from %s: %s %s, %d stream(s), %.0fs", raw.RemoteAddr(), p.Protocol, dir, p.Streams, p.DurationSec)
+	s.logf("test from %s: %s, %s, %d stream(s), %.0fs", raw.RemoteAddr(), p.Protocol, dir, p.Streams, p.DurationSec)
 
 	var sid [sessionLen]byte
 	_, _ = rand.Read(sid[:])

@@ -18,7 +18,7 @@
   </div>
   <div class="server-ctl">
     <span class="dot" id="srvDot"></span>
-    <span id="srvText">테스트 서버 확인 중</span>
+    <span id="srvText">연결 대기 상태 확인 중</span>
     <button class="btn small" id="srvToggle">-</button>
   </div>
 </header>
@@ -28,7 +28,7 @@
     <h2>테스트 설정</h2>
 
     <label class="field">
-      <span>상대 PC 주소 (서버)</span>
+      <span>상대 PC 주소</span>
       <div class="row">
         <input id="host" placeholder="예: 192.168.1.10" autocomplete="off">
         <input id="port" type="number" min="1" max="65000" value="5210" class="port" title="포트">
@@ -49,10 +49,10 @@
     </div>
 
     <div class="field">
-      <span>방향</span>
-      <div class="seg" id="dir">
-        <button data-v="up" class="on">이 PC → 상대</button>
-        <button data-v="down">상대 → 이 PC</button>
+      <span>Mode <em class="hint" id="modeHint">이 PC가 트래픽을 보냅니다</em></span>
+      <div class="seg" id="mode">
+        <button data-v="server" class="on">Server (송신)</button>
+        <button data-v="client">Client (수신)</button>
       </div>
     </div>
 
@@ -144,7 +144,7 @@
 
     <section class="panel">
       <details>
-        <summary><h2 class="inline">서버 로그</h2> <span class="muted small">이 PC로 들어온 테스트</span></summary>
+        <summary><h2 class="inline">연결 로그</h2> <span class="muted small">상대 PC가 이 PC로 시작한 테스트</span></summary>
         <pre class="log" id="log"></pre>
       </details>
     </section>

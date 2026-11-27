@@ -20,7 +20,7 @@ import (
 	"github.com/kimjongoh80/Traffic-Test/internal/gui"
 )
 
-const version = "0.2.0"
+const version = "0.2.1"
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Traffic-Test %s - network traffic stress test

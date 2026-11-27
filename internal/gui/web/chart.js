@@ -75,7 +75,7 @@
         ctx.strokeStyle = grid; ctx.beginPath(); ctx.moveTo(L.l, y); ctx.lineTo(L.w - L.r, y); ctx.stroke();
         ctx.fillStyle = muted; ctx.textAlign = 'right'; ctx.fillText(this.opts.yFormat(v), L.l - 6, y);
       }
-      const xstep = niceStep(xmax, 6) || 1;
+      const xstep = Math.max(1, niceStep(xmax, 6) || 1);
       ctx.textAlign = 'center'; ctx.textBaseline = 'top';
       for (let x = 0; x <= xmax + 1e-9; x += xstep) {
         ctx.fillStyle = muted; ctx.fillText(Math.round(x) + 's', X(x), L.t + ph + 6);

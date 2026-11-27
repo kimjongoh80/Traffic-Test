@@ -68,17 +68,19 @@
     }
     updateFormHints(); saveForm();
   }));
+  const isClientMode = () => seg('mode') === 'client';
 
   function updateFormHints() {
     const udp = seg('proto') === 'udp';
     $('bwHint').textContent = udp ? '비우면 1 Gbps' : '비우면 최대 속도';
     $('lenLabel').textContent = udp ? '패킷 크기 (바이트)' : '버퍼 크기 (바이트)';
     $('length').placeholder = udp ? '1460' : '128K';
+    $('modeHint').textContent = isClientMode() ? '상대 PC가 이 PC로 트래픽을 보냅니다' : '이 PC가 상대 PC로 트래픽을 보냅니다';
   }
 
   const formFields = ['host', 'port', 'duration', 'streams', 'bw', 'bwUnit', 'length', 'latency', 'cBw', 'cLoss', 'cRtt', 'cJit'];
   function saveForm() {
-    const f = { proto: seg('proto'), dir: seg('dir') };
+    const f = { proto: seg('proto'), mode: seg('mode') };
     formFields.forEach(k => f[k] = $(k).value);
     store.set('form', f);
   }
@@ -87,7 +89,8 @@
     if (!f) return;
     formFields.forEach(k => { if (f[k] != null) $(k).value = f[k]; });
     if (f.proto) seg('proto', f.proto);
-    if (f.dir) seg('dir', f.dir);
+    if (f.mode) seg('mode', f.mode);
+    else if (f.dir) seg('mode', f.dir === 'down' ? 'client' : 'server');
   }
   formFields.forEach(k => $(k).addEventListener('change', saveForm));
 
@@ -116,7 +119,7 @@
     const num = id => { const v = parseFloat($(id).value); return isFinite(v) ? v : 0; };
     const params = {
       protocol: seg('proto'),
-      reverse: seg('dir') === 'down',
+      reverse: isClientMode(), // Client = this PC receives (peer sends)
       duration_sec: num('duration') || 10,
       streams: Math.max(1, Math.round(num('streams')) || 1),
       bandwidth: Math.round(num('bw') * parseFloat($('bwUnit').value)),
@@ -331,7 +334,7 @@
 
   function setProgress(f) { $('progressBar').style.width = Math.max(0, Math.min(1, f)) * 100 + '%'; }
 
-  const dirLabel = p => p.reverse ? '상대 → 이 PC' : '이 PC → 상대';
+  const dirLabel = p => p.reverse ? 'Client 모드 (상대 → 이 PC)' : 'Server 모드 (이 PC → 상대)';
   const describe = p => `${p.protocol.toUpperCase()} · ${dirLabel(p)} · 스트림 ${p.streams} · ${p.duration_sec}초` + (p.bandwidth ? ` · 목표 ${fmtBits(p.bandwidth)}` : '');
 
   const CHECK_NAMES = { bandwidth: '평균 대역폭', loss: '패킷 손실률', rtt: '평균 RTT', jitter: '지터' };
@@ -365,7 +368,8 @@
       ['RTT 지터', fmtMs(L.jitter_ms)],
       ['프로브 손실', `${fmtPct(L.loss_pct)} (${L.sent - L.received}/${L.sent})`]);
     $('summaryGrid').innerHTML = items.map(([k, val]) => `<div><span>${k}</span><b>${val}</b></div>`).join('');
-    $('summaryMeta').textContent = r.client_host && r.server_host ? `${r.client_host} ↔ ${r.server_host}` : '';
+    $('summaryMeta').textContent = r.client_host && r.server_host
+      ? (r.params.reverse ? `${r.server_host} → ${r.client_host}` : `${r.client_host} → ${r.server_host}`) : '';
     $('checks').innerHTML = v.evaluated
       ? `<table><thead><tr><th>판정 항목</th><th>기준</th><th>측정값</th><th>결과</th></tr></thead><tbody>${v.checks.map(c =>
         `<tr><td>${CHECK_NAMES[c.name] || c.name}</td><td>${esc(c.limit)}</td><td>${esc(c.measured)}</td><td><span class="tag ${c.pass ? 'pass' : 'fail'}">${c.pass ? 'PASS' : 'FAIL'}</span></td></tr>`).join('')}</tbody></table>`
@@ -430,7 +434,7 @@
     try {
       if (state.server && state.server.running) await api('/api/server/stop', {});
       else await api('/api/server/start', { port: state.server ? state.server.port : 5210 });
-    } catch (e) { toast('서버: ' + e.message); }
+    } catch (e) { toast('연결 대기: ' + e.message); }
     refreshStatus();
   };
 
@@ -439,8 +443,8 @@
   function renderServer(s) {
     state.server = s;
     $('srvDot').className = 'dot ' + (s.running ? 'on' : 'off');
-    $('srvText').textContent = s.running ? `테스트 서버 대기 중 (포트 ${s.port})` : (s.error ? `서버 꺼짐: ${s.error}` : '테스트 서버 꺼짐');
-    $('srvToggle').textContent = s.running ? '서버 끄기' : '서버 켜기';
+    $('srvText').textContent = s.running ? `연결 대기 중 (포트 ${s.port})` : (s.error ? `연결 대기 꺼짐: ${s.error}` : '연결 대기 꺼짐');
+    $('srvToggle').textContent = s.running ? '대기 끄기' : '대기 켜기';
   }
 
   async function refreshStatus() {
@@ -464,7 +468,7 @@
     tb.innerHTML = list.map(r => {
       const tag = !r.evaluated ? '<span class="tag none">-</span>' : r.pass ? '<span class="tag pass">PASS</span>' : '<span class="tag fail">FAIL</span>';
       return `<tr data-id="${esc(r.id)}"><td>${fmtTime(r.created_at)}${r.stopped ? ' <span class="muted small">(중지)</span>' : ''}</td><td>${esc(r.target)}</td>` +
-        `<td>${r.protocol.toUpperCase()} ${r.reverse ? '↓' : '↑'} ×${r.streams} · ${r.duration_sec.toFixed(0)}s</td>` +
+        `<td>${r.protocol.toUpperCase()} ${r.reverse ? 'Client' : 'Server'} ×${r.streams} · ${r.duration_sec.toFixed(0)}s</td>` +
         `<td>${fmtBits(r.bits_per_sec, true)}</td><td>${r.protocol === 'udp' ? fmtPct(r.loss_pct || 0) : '-'}</td><td>${r.rtt_ms ? fmtMs(r.rtt_ms) : '-'}</td>` +
         `<td>${tag}</td><td><button class="icon-btn" data-del="${esc(r.id)}" title="삭제">✕</button></td></tr>`;
     }).join('');
