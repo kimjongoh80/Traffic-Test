@@ -46,7 +46,7 @@
         this.c.height = Math.round(h * dpr);
       }
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return { w, h, l: 62, r: 10, t: 22, b: 24 };
+      return { w, h, l: 76, r: 12, t: 28, b: 28 };
     }
     yRange() {
       let max = 0, min = this.opts.yMin ?? 0;
@@ -69,7 +69,7 @@
       const Y = y => L.t + ph - ((y - yr.min) / (yr.max - yr.min)) * ph;
       this._geom = { L, X, xmax, pw };
 
-      ctx.font = '11px system-ui, sans-serif';
+      ctx.font = '14px system-ui, sans-serif';
       ctx.lineWidth = 1;
       ctx.textBaseline = 'middle';
       for (let v = yr.min; v <= yr.max + 1e-9; v += yr.step) {
@@ -115,9 +115,9 @@
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       let lx = L.l;
       this.opts.series.forEach(s => {
-        ctx.fillStyle = cssVar(s.color); ctx.fillRect(lx, 7, 10, 3);
-        ctx.fillStyle = muted; ctx.fillText(s.name, lx + 14, 9);
-        lx += 22 + ctx.measureText(s.name).width;
+        ctx.fillStyle = cssVar(s.color); ctx.fillRect(lx, 9, 12, 3);
+        ctx.fillStyle = muted; ctx.fillText(s.name, lx + 16, 11);
+        lx += 26 + ctx.measureText(s.name).width;
       });
 
       if (this.hover >= 0 && this.hover < this.xs.length) {

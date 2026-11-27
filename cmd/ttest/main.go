@@ -22,7 +22,7 @@ import (
 )
 
 // version is overridden at build time with -ldflags "-X main.version=..."
-var version = "0.6.0"
+var version = "0.6.1"
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Traffic-Test %s - network traffic stress test
