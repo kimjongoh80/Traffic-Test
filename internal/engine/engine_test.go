@@ -138,7 +138,7 @@ func TestBusyServer(t *testing.T) {
 	port := startServer(t)
 	done := make(chan struct{})
 	go func() {
-		RunClient(context.Background(), "127.0.0.1", port, TestParams{Protocol: "tcp", DurationSec: 1.5, Bandwidth: 10e6}, nil)
+		RunClient(context.Background(), "127.0.0.1", port, TestParams{Protocol: "tcp", DurationSec: 5, Bandwidth: 10e6}, nil)
 		close(done)
 	}()
 	time.Sleep(300 * time.Millisecond)

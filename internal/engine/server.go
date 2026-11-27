@@ -156,7 +156,14 @@ func (s *Server) handleControl(raw net.Conn) error {
 		_ = cc.send(ctrlMsg{Type: "error", Error: fmt.Sprintf("protocol version mismatch (server %d, client %d)", ProtocolVersion, m.Version)})
 		return fmt.Errorf("version mismatch")
 	}
-	if !s.busy.TryLock() {
+	// The previous test may still be wrapping up (saving the client's report)
+	// for a moment after its client returned, so wait briefly before refusing.
+	locked := s.busy.TryLock()
+	for wait := time.Now().Add(3 * time.Second); !locked && time.Now().Before(wait); {
+		time.Sleep(50 * time.Millisecond)
+		locked = s.busy.TryLock()
+	}
+	if !locked {
 		_ = cc.send(ctrlMsg{Type: "error", Error: "server is busy with another test"})
 		return fmt.Errorf("busy")
 	}
