@@ -1,0 +1,35 @@
+{
+  "RT_GROUP_ICON": {
+    "#1": { "0000": "icon.png" }
+  },
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": {
+        "identity": { "name": "TrafficTest", "version": "0.0.0.0" },
+        "description": "Traffic-Test network stress test",
+        "minimum-os": "win7",
+        "execution-level": "as invoker",
+        "dpi-awareness": "system",
+        "use-common-controls-v6": true
+      }
+    }
+  },
+  "RT_VERSION": {
+    "#1": {
+      "0000": {
+        "fixed": { "file_version": "0.0.0.0", "product_version": "0.0.0.0" },
+        "info": {
+          "0409": {
+            "CompanyName": "",
+            "FileDescription": "Traffic-Test network traffic stress test",
+            "FileVersion": "0.0.0",
+            "InternalName": "TrafficTest",
+            "OriginalFilename": "TrafficTest.exe",
+            "ProductName": "Traffic-Test",
+            "ProductVersion": "0.0.0"
+          }
+        }
+      }
+    }
+  }
+}
