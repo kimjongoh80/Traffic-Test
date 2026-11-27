@@ -22,11 +22,25 @@ type Server struct {
 	Bind   string // optional bind address
 	Logger *log.Logger
 
+	// Optional hooks so a GUI can show tests served by this PC.
+	OnStart    func(TestInfo)
+	OnInterval func(id string, iv Interval)
+	OnEnd      func(id string, res *Result, err error)
+
 	busy    sync.Mutex
 	mu      sync.Mutex
 	pending map[string]chan dataConn
 	ln      net.Listener
 	probe   *net.UDPConn
+}
+
+// TestInfo describes a test that a client started on this server.
+type TestInfo struct {
+	ID         string     `json:"id"`
+	Remote     string     `json:"remote"`
+	ClientHost string     `json:"client_host"`
+	Params     TestParams `json:"params"`
+	StartedAt  time.Time  `json:"started_at"`
 }
 
 type dataConn struct {
@@ -149,6 +163,7 @@ func (s *Server) handleControl(raw net.Conn) error {
 	defer s.busy.Unlock()
 
 	p := *m.Params
+	clientHost := m.Hostname
 	if err := p.Normalize(); err != nil {
 		_ = cc.send(ctrlMsg{Type: "error", Error: err.Error()})
 		return err
@@ -271,6 +286,23 @@ func (s *Server) handleControl(raw net.Conn) error {
 		return err
 	}
 	start := time.Now()
+	info := TestInfo{ID: sess, Remote: raw.RemoteAddr().String(), ClientHost: m.Hostname, Params: p, StartedAt: start}
+	if clientHost != "" {
+		info.ClientHost = clientHost
+	}
+	var finalRes *Result
+	var finalErr error
+	if s.OnStart != nil {
+		s.OnStart(info)
+	}
+	if s.OnEnd != nil {
+		defer func() { s.OnEnd(sess, finalRes, finalErr) }()
+	}
+	onInterval := func(m ctrlMsg) {
+		if m.Type == "client_interval" && m.Interval != nil && s.OnInterval != nil {
+			s.OnInterval(sess, *m.Interval)
+		}
+	}
 
 	sendGroup := group
 	if !serverReceives {
@@ -301,6 +333,7 @@ func (s *Server) handleControl(raw net.Conn) error {
 				endCh <- nil
 				return
 			}
+			onInterval(m)
 		}
 	}()
 
@@ -326,6 +359,7 @@ func (s *Server) handleControl(raw net.Conn) error {
 		case err := <-endCh:
 			if err != nil {
 				sendGroup.stop.Store(true)
+				finalErr = err
 				return err
 			}
 		}
@@ -345,6 +379,20 @@ func (s *Server) handleControl(raw net.Conn) error {
 	} else {
 		sendGroup.stop.Store(true)
 		_ = cc.send(ctrlMsg{Type: "result", Totals: sendGroup.totals()})
+	}
+	// The client sends its final result so this side can show and save it.
+	deadline := time.Now().Add(8 * time.Second)
+	for time.Now().Before(deadline) {
+		m, err := cc.recv(time.Until(deadline))
+		if err != nil {
+			finalErr = fmt.Errorf("client did not send final results: %w", err)
+			break
+		}
+		if m.Type == "report" && m.Result != nil {
+			finalRes = m.Result
+			break
+		}
+		onInterval(m)
 	}
 	s.logf("test from %s finished after %.1fs", raw.RemoteAddr(), time.Since(start).Seconds())
 	return nil

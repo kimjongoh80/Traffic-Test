@@ -18,8 +18,7 @@
   </div>
   <div class="server-ctl">
     <span class="dot" id="srvDot"></span>
-    <span id="srvText">연결 대기 상태 확인 중</span>
-    <button class="btn small" id="srvToggle">-</button>
+    <span id="srvText">서버 상태 확인 중</span>
     <button class="btn small" id="quitBtn" title="Traffic-Test 프로그램을 종료합니다">종료</button>
   </div>
 </header>
@@ -28,64 +27,83 @@
   <aside class="panel settings">
     <h2>테스트 설정</h2>
 
-    <label class="field">
-      <span>상대 PC 주소</span>
-      <div class="row">
-        <input id="host" placeholder="예: 192.168.1.10" autocomplete="off">
-        <input id="port" type="number" min="1" max="65000" value="5210" class="port" title="포트">
-      </div>
-    </label>
-
     <div class="field">
-      <span>프리셋</span>
-      <div class="chips" id="presets"></div>
-    </div>
-
-    <div class="field">
-      <span>프로토콜</span>
-      <div class="seg" id="proto">
-        <button data-v="tcp" class="on">TCP</button>
-        <button data-v="udp">UDP</button>
+      <span>Mode</span>
+      <div class="seg big-seg" id="mode">
+        <button data-v="server" class="on">Server<small>트래픽 송신</small></button>
+        <button data-v="client">Client<small>트래픽 수신</small></button>
       </div>
     </div>
 
-    <div class="field">
-      <span>Mode <em class="hint" id="modeHint">이 PC가 트래픽을 보냅니다</em></span>
-      <div class="seg" id="mode">
-        <button data-v="server" class="on">Server (송신)</button>
-        <button data-v="client">Client (수신)</button>
+    <!-- Server: listens on every IP, sends only when a Client starts a test -->
+    <div id="serverPane">
+      <p class="pane-help">Server는 트래픽을 <b>보내는</b> 쪽입니다. 서버를 시작해 두면 Client PC가 테스트를 시작할 때 이 PC가 트래픽을 보냅니다. Client의 IP는 입력할 필요가 없습니다.</p>
+      <div class="ipbox">
+        <div class="ipbox-title">Client PC에 입력할 이 PC의 주소</div>
+        <div id="ipList" class="ip-list">-</div>
       </div>
+      <label class="field">
+        <span>포트</span>
+        <input id="srvPort" type="number" min="1" max="65000" value="5210">
+      </label>
+      <button class="btn primary big" id="srvStartBtn">서버 시작</button>
+      <p class="srv-state" id="srvState">서버가 꺼져 있습니다.</p>
     </div>
 
-    <div class="grid2">
-      <label class="field"><span>시간 (초)</span><input id="duration" type="number" min="1" value="10"></label>
-      <label class="field"><span>병렬 스트림</span><input id="streams" type="number" min="1" max="128" value="1"></label>
-    </div>
+    <!-- Client: enters the Server IP and starts the test; receives traffic -->
+    <div id="clientPane" hidden>
+      <p class="pane-help">Client는 트래픽을 <b>받는</b> 쪽입니다. Server PC의 주소를 입력하고 테스트를 시작하면 Server가 이 PC로 트래픽을 보냅니다.</p>
+      <label class="field">
+        <span>Server PC 주소</span>
+        <div class="row">
+          <input id="host" placeholder="예: 192.168.1.10" autocomplete="off">
+          <input id="port" type="number" min="1" max="65000" value="5210" class="port" title="포트">
+        </div>
+      </label>
 
-    <label class="field">
-      <span>목표 대역폭 <em class="hint" id="bwHint">비우면 최대 속도</em></span>
-      <div class="row">
-        <input id="bw" type="number" min="0" step="any" placeholder="최대">
-        <select id="bwUnit"><option value="1e6">Mbps</option><option value="1e9" selected>Gbps</option></select>
+      <div class="field">
+        <span>프리셋</span>
+        <div class="chips" id="presets"></div>
       </div>
-    </label>
 
-    <div class="grid2">
-      <label class="field"><span id="lenLabel">버퍼 크기 (바이트)</span><input id="length" type="number" min="0" placeholder="자동"></label>
-      <label class="field"><span>RTT 측정 간격 (ms)</span><input id="latency" type="number" min="0" value="100"></label>
-    </div>
+      <div class="field">
+        <span>프로토콜</span>
+        <div class="seg" id="proto">
+          <button data-v="tcp" class="on">TCP</button>
+          <button data-v="udp">UDP</button>
+        </div>
+      </div>
 
-    <details class="criteria" id="criteriaBox">
-      <summary>합격 기준 <em class="hint">비우면 판정 안 함</em></summary>
       <div class="grid2">
-        <label class="field"><span>최소 대역폭 (Mbps)</span><input id="cBw" type="number" min="0" step="any"></label>
-        <label class="field"><span>최대 손실 (%)</span><input id="cLoss" type="number" min="0" step="any"></label>
-        <label class="field"><span>최대 RTT (ms)</span><input id="cRtt" type="number" min="0" step="any"></label>
-        <label class="field"><span>최대 지터 (ms)</span><input id="cJit" type="number" min="0" step="any"></label>
+        <label class="field"><span>시간 (초)</span><input id="duration" type="number" min="1" value="10"></label>
+        <label class="field"><span>병렬 스트림</span><input id="streams" type="number" min="1" max="128" value="1"></label>
       </div>
-    </details>
 
-    <button class="btn primary big" id="startBtn">테스트 시작</button>
+      <label class="field">
+        <span>목표 대역폭 <em class="hint" id="bwHint">비우면 최대 속도</em></span>
+        <div class="row">
+          <input id="bw" type="number" min="0" step="any" placeholder="최대">
+          <select id="bwUnit"><option value="1e6">Mbps</option><option value="1e9" selected>Gbps</option></select>
+        </div>
+      </label>
+
+      <div class="grid2">
+        <label class="field"><span id="lenLabel">버퍼 크기 (바이트)</span><input id="length" type="number" min="0" placeholder="자동"></label>
+        <label class="field"><span>RTT 측정 간격 (ms)</span><input id="latency" type="number" min="0" value="100"></label>
+      </div>
+
+      <details class="criteria" id="criteriaBox">
+        <summary>합격 기준 <em class="hint">비우면 판정 안 함</em></summary>
+        <div class="grid2">
+          <label class="field"><span>최소 대역폭 (Mbps)</span><input id="cBw" type="number" min="0" step="any"></label>
+          <label class="field"><span>최대 손실 (%)</span><input id="cLoss" type="number" min="0" step="any"></label>
+          <label class="field"><span>최대 RTT (ms)</span><input id="cRtt" type="number" min="0" step="any"></label>
+          <label class="field"><span>최대 지터 (ms)</span><input id="cJit" type="number" min="0" step="any"></label>
+        </div>
+      </details>
+
+      <button class="btn primary big" id="startBtn">테스트 시작</button>
+    </div>
     <p class="err" id="formErr"></p>
   </aside>
 
@@ -94,7 +112,7 @@
       <div class="status-line">
         <div>
           <div class="state" id="stateText">대기 중</div>
-          <div class="muted small" id="stateSub">상대 PC에서도 Traffic-Test를 실행한 뒤 주소를 입력하고 시작하세요.</div>
+          <div class="muted small" id="stateSub">Mode를 고르세요. Server PC는 서버를 시작해 두고, Client PC에서 테스트를 시작합니다.</div>
         </div>
         <div class="verdict" id="verdict" hidden></div>
       </div>
@@ -148,7 +166,7 @@
 
     <section class="panel">
       <details>
-        <summary><h2 class="inline">연결 로그</h2> <span class="muted small">상대 PC가 이 PC로 시작한 테스트</span></summary>
+        <summary><h2 class="inline">연결 로그</h2> <span class="muted small">Client PC가 이 PC(Server)로 시작한 테스트</span></summary>
         <pre class="log" id="log"></pre>
       </details>
     </section>

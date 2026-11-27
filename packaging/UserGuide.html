@@ -51,9 +51,9 @@
   <li>시험할 네트워크 장비 (스위치, 라우터, 방화벽, 회선 등)</li>
   <li>두 PC에 Traffic-Test</li>
 </ul>
-<div class="diagram">[ PC A : Traffic-Test ] ── 시험 대상 장비 ── [ PC B : Traffic-Test ]
-      192.168.1.10                                      192.168.1.20</div>
-<p>두 PC 모두 같은 프로그램을 실행합니다. 어느 쪽에서든 테스트를 시작할 수 있습니다.</p>
+<div class="diagram">[ Server PC : 트래픽 송신 ] ── 시험 대상 장비 ── [ Client PC : 트래픽 수신 ]
+        192.168.1.10                                          192.168.1.20</div>
+<p>두 PC 모두 같은 프로그램을 실행합니다. 한 대는 <b>Server</b>(트래픽을 보내는 쪽), 다른 한 대는 <b>Client</b>(트래픽을 받는 쪽)로 씁니다. 테스트는 Client PC에서 시작합니다.</p>
 
 <h2 id="install">2. 설치</h2>
 <h3>Windows</h3>
@@ -61,7 +61,7 @@
   <li><code>TrafficTest-버전-windows-x64.zip</code> 압축을 원하는 폴더에 풉니다. (ARM 노트북은 <code>windows-arm64</code>)</li>
   <li><code>TrafficTest.exe</code>를 더블클릭합니다.</li>
   <li>"Windows의 PC 보호" 창이 나오면 <b>추가 정보 → 실행</b>을 누릅니다.</li>
-  <li>검은 창과 함께 브라우저에 Traffic-Test 화면이 열립니다. 검은 창을 닫거나 화면의 <b>종료</b> 버튼을 누르면 프로그램이 끝납니다.</li>
+  <li>Traffic-Test 앱 창이 열립니다. 창을 닫으면 프로그램이 끝납니다.</li>
 </ol>
 <h3>macOS</h3>
 <ol>
@@ -70,9 +70,9 @@
   <li>처음 한 번은 앱을 <b>Control 키를 누른 채 클릭 → 열기</b>로 실행합니다. 서명되지 않은 앱이라 그냥 더블클릭하면 막힐 수 있습니다.
     <br>그래도 막히면 <b>시스템 설정 → 개인정보 보호 및 보안</b> 아래쪽의 <b>그래도 열기</b>를 누릅니다.</li>
   <li>"들어오는 네트워크 연결을 허용하겠습니까?"가 나오면 <b>허용</b>을 누릅니다.</li>
-  <li>브라우저에 화면이 열립니다. 끝낼 때는 화면 오른쪽 위 <b>종료</b> 버튼을 누릅니다.</li>
+  <li>Traffic-Test 앱 창이 열립니다. 창을 닫거나 <b>⌘Q</b>를 누르면 프로그램이 끝납니다.</li>
 </ol>
-<div class="tip">브라우저 창을 실수로 닫았다면 주소창에 <code>http://127.0.0.1:8080</code>을 입력하면 다시 열립니다. (8080을 다른 프로그램이 쓰고 있으면 8081, 8082… 순서로 바뀝니다. 검은 창에 주소가 표시됩니다.)</div>
+<div class="tip">앱 창은 Windows에 기본으로 들어 있는 Microsoft Edge WebView2를 사용합니다. 오래된 Windows에서 WebView2가 없으면 기본 브라우저로 화면이 열립니다. 이때는 화면 오른쪽 위 <b>종료</b> 버튼으로 끝냅니다.</div>
 
 <h2 id="firewall">3. 방화벽 설정</h2>
 <p>상대 PC가 보내는 테스트 트래픽이 들어올 수 있게 <b>두 PC 모두</b> 방화벽을 열어야 합니다.</p>
@@ -89,20 +89,22 @@
 </ul>
 
 <h2 id="run">4. 테스트하기</h2>
+<h3>Server PC (트래픽을 보내는 쪽)</h3>
 <ol>
-  <li>두 PC에서 Traffic-Test를 실행합니다. 화면 오른쪽 위에 <b>연결 대기 중 (포트 5210)</b>이 초록색으로 보여야 합니다.</li>
-  <li>화면 맨 위 <b>이 PC</b> 옆에 표시된 IP를 확인합니다.</li>
-  <li>테스트를 시작할 PC에서 <b>상대 PC 주소</b>에 반대쪽 PC의 IP를 입력합니다.</li>
-  <li><b>Mode</b>를 고릅니다.
-    <ul>
-      <li><b>Server (송신)</b>: 이 PC가 트래픽을 <b>보냅니다</b>.</li>
-      <li><b>Client (수신)</b>: 상대 PC가 이 PC로 트래픽을 보내고, 이 PC가 <b>받습니다</b>.</li>
-    </ul>
-  </li>
-  <li>프리셋을 고르거나 프로토콜, 시간, 스트림을 설정하고 <b>테스트 시작</b>을 누릅니다.</li>
-  <li>진행 중에는 지표와 그래프가 1초마다 갱신됩니다. 중간에 멈추려면 <b>테스트 중지</b>를 누릅니다(그때까지의 결과는 저장됩니다).</li>
+  <li>Traffic-Test를 실행하고 <b>Mode</b>에서 <b>Server</b>를 고릅니다.</li>
+  <li>화면에 표시된 <b>Client PC에 입력할 이 PC의 주소</b>를 확인합니다.</li>
+  <li><b>서버 시작</b>을 누릅니다. "Client 연결 대기 중"이 표시되고, 이 상태에서는 트래픽을 보내지 않습니다.</li>
+  <li>Client PC가 테스트를 시작하면 그때 트래픽을 보내며, Server 화면에서도 그래프와 결과를 실시간으로 볼 수 있습니다. 테스트가 끝나면 다시 대기 상태로 돌아갑니다.</li>
 </ol>
-<div class="tip">양방향 성능을 보려면 같은 설정으로 Mode만 바꿔 두 번 테스트하세요. 장비가 한쪽 방향에서만 느린 경우를 찾을 수 있습니다.</div>
+<p>Server는 모든 네트워크 주소에서 연결을 받으므로 Client의 IP를 따로 입력할 필요가 없습니다.</p>
+<h3>Client PC (트래픽을 받는 쪽)</h3>
+<ol>
+  <li>Traffic-Test를 실행하고 <b>Mode</b>에서 <b>Client</b>를 고릅니다.</li>
+  <li><b>Server PC 주소</b>에 Server 화면에 표시된 IP를 입력합니다.</li>
+  <li>프리셋을 고르거나 프로토콜, 시간, 스트림, 목표 대역폭, 합격 기준을 설정합니다.</li>
+  <li><b>테스트 시작</b>을 누르면 Server가 이 PC로 트래픽을 보냅니다. 중간에 멈추려면 <b>테스트 중지</b>를 누릅니다(그때까지의 결과는 저장됩니다).</li>
+</ol>
+<div class="tip">반대 방향 성능을 보려면 두 PC의 Mode를 서로 바꿔 한 번 더 테스트하세요. 장비가 한쪽 방향에서만 느린 경우를 찾을 수 있습니다.</div>
 
 <h2 id="settings">5. 설정 항목</h2>
 <table>
@@ -137,7 +139,7 @@
   <tr><td>패킷 손실</td><td>UDP: 보낸 패킷 중 도착하지 않은 비율, 순서 뒤바뀜 포함. TCP는 재전송으로 손실이 보정되므로 RTT 측정 패킷의 손실률을 표시</td></tr>
 </table>
 <p><b>합격 기준</b>을 열고 최소 대역폭, 최대 손실, 최대 RTT, 최대 지터를 입력하면 그래프에 빨간 점선이 그려지고, 테스트가 끝나면 <b>PASS / FAIL</b>과 항목별 결과가 표시됩니다. 비워 둔 항목은 판정하지 않습니다.</p>
-<p>모든 결과는 자동 저장되고 <b>테스트 이력</b>에서 다시 열 수 있습니다.</p>
+<p>모든 결과는 Server와 Client 양쪽에 자동 저장되고 <b>테스트 이력</b>에서 다시 열 수 있습니다.</p>
 <ul>
   <li>Windows: 프로그램 폴더 안 <code>results</code> 폴더 (쓰기 권한이 없으면 <code>사용자 폴더\TrafficTest\results</code>)</li>
   <li>macOS: <code>문서/TrafficTest/results</code></li>
@@ -164,7 +166,7 @@
 <h2 id="trouble">10. 문제 해결</h2>
 <table>
   <tr><th>증상</th><th>확인할 것</th></tr>
-  <tr><td>"cannot connect to server"</td><td>상대 PC에서 Traffic-Test가 실행 중이고 <b>연결 대기 중</b>인지, IP가 맞는지, 상대 PC 방화벽(TCP 5210)이 열렸는지 확인하세요. 상대 PC에서 <code>ping</code>이 되는지도 확인하세요.</td></tr>
+  <tr><td>"cannot connect to server"</td><td>Server PC에서 <b>서버 시작</b>을 눌러 "Client 연결 대기 중"인지, IP가 맞는지, Server PC 방화벽(TCP 5210)이 열렸는지 확인하세요. <code>ping</code>이 되는지도 확인하세요.</td></tr>
   <tr><td>"no UDP packets reached the server"</td><td>UDP 5211 이상 포트가 방화벽이나 시험 장비에서 막혀 있습니다.</td></tr>
   <tr><td>RTT가 "-"로 나옴</td><td>UDP 5210이 막혀 있습니다. 대역폭 측정에는 영향이 없습니다.</td></tr>
   <tr><td>"server is busy"</td><td>상대 PC가 이미 다른 테스트를 하고 있습니다. 끝난 뒤 다시 시도하세요.</td></tr>
@@ -174,16 +176,16 @@
 </table>
 
 <h2 id="cli">11. 명령줄 사용</h2>
-<p>스크립트나 원격 접속 환경에서는 명령줄로도 쓸 수 있습니다. (macOS는 zip 안의 <code>ttest</code> 파일)</p>
-<pre># 한쪽 PC: 대기
-TrafficTest.exe server
+<p>스크립트나 원격 접속 환경에서는 명령줄로도 쓸 수 있습니다. Windows는 zip 안의 <code>ttest.exe</code>, macOS는 <code>ttest</code>를 사용하세요.</p>
+<pre># Server PC: 대기
+ttest server
 
-# 반대쪽 PC: TCP 30초, 스트림 4, 보고서와 CSV 저장
-TrafficTest.exe client -c 192.168.1.10 -t 30 -P 4 --report report.html --csv result.csv
+# Client PC: Server가 보내고 이 PC가 받기(-R), TCP 30초, 스트림 4, 보고서와 CSV 저장
+ttest client -c 192.168.1.10 -R -t 30 -P 4 --report report.html --csv result.csv
 
-# UDP 1 Gbps, 상대 PC가 보내고 이 PC가 받기(-R)
-TrafficTest.exe client -c 192.168.1.10 -u -b 1G -R</pre>
-<p>전체 옵션은 <code>TrafficTest.exe client -h</code>로 볼 수 있습니다.</p>
+# UDP 1 Gbps 수신
+ttest client -c 192.168.1.10 -R -u -b 1G</pre>
+<p><code>-R</code>을 빼면 반대로 Client가 보내고 Server가 받습니다. 전체 옵션은 <code>ttest client -h</code>로 볼 수 있습니다.</p>
 </div>
 </body>
 </html>

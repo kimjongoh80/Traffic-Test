@@ -26,7 +26,7 @@ jperf/iperf를 참고했고, TCP·UDP 대역폭, 지연시간(RTT), 지터, 패�
 | `TrafficTest-<버전>-macos-apple-silicon.zip` | M1 이상 Mac |
 | `TrafficTest-<버전>-macos-intel.zip` | Intel Mac |
 
-- **Windows**: 압축을 풀고 `TrafficTest.exe` 실행. `Allow-Firewall.bat`을 한 번 실행해 방화벽을 엽니다.
+- **Windows**: 압축을 풀고 `TrafficTest.exe` 실행(앱 창). 명령줄은 `ttest.exe`. `Allow-Firewall.bat`을 한 번 실행해 방화벽을 엽니다.
 - **macOS**: 압축을 풀고 `TrafficTest.app`을 **Control+클릭 → 열기**로 처음 실행합니다(서명되지 않은 앱). 명령줄용 `ttest`도 함께 들어 있습니다.
 - 끝낼 때는 화면 오른쪽 위 **종료** 버튼. 이미 실행 중일 때 다시 실행하면 기존 화면을 다시 엽니다.
 
@@ -34,7 +34,7 @@ GitHub Actions가 push마다 테스트와 패키지 빌드를 하고, `v0.4.0`�
 
 ## 빌드
 
-패키지 만들기 (zip 4종, `dist/`): `./scripts/package.sh` (Go, zip, [go-winres](https://github.com/tc-hib/go-winres) 필요)
+패키지 만들기 (`dist/`): `./scripts/package.sh windows` (어느 OS에서나), `./scripts/package.sh macos` (Mac에서, Xcode 명령줄 도구 필요). Go, zip, [go-winres](https://github.com/tc-hib/go-winres) 필요. GitHub Actions는 Ubuntu에서 Windows용, macOS 러너에서 mac용을 만듭니다.
 
 테스트: `go test ./...`
 
@@ -49,14 +49,13 @@ build.bat       # Windows
 
 `dist/` 폴더에 `ttest-windows-amd64.exe`, `ttest-macos-arm64`, `ttest-macos-amd64`가 만들어집니다.
 
-## 웹 GUI (기본)
+## 앱 화면 (기본)
 
-실행 파일을 **더블클릭**하거나 인수 없이 실행하면 웹 GUI가 열립니다.
+실행 파일을 **더블클릭**하면 앱 창이 열립니다(Windows: WebView2, macOS: 네이티브 창. 안 되면 기본 브라우저).
 
-1. 장비 양쪽 PC에서 모두 Traffic-Test를 실행합니다. 실행하면 테스트 서버(포트 5210)가 자동으로 켜집니다.
-2. 한쪽 PC의 브라우저 화면에서 **상대 PC 주소**를 입력합니다. 화면 상단에 각 PC의 IP가 표시됩니다.
-3. **Mode**를 고릅니다. **Server**는 이 PC가 트래픽을 보내는 쪽, **Client**는 이 PC가 트래픽을 받는 쪽입니다.
-4. 프리셋을 고르거나 프로토콜·시간·스트림을 설정하고 **테스트 시작**을 누릅니다.
+1. **Server PC**(트래픽을 보내는 쪽): Mode를 **Server**로 두고 **서버 시작**. Client IP 입력은 필요 없고, Client가 테스트를 시작하기 전까지 트래픽을 보내지 않습니다.
+2. **Client PC**(트래픽을 받는 쪽): Mode를 **Client**로 바꾸고 Server 화면에 표시된 IP를 입력한 뒤 **테스트 시작**.
+3. 테스트 중에는 양쪽 화면 모두 실시간 그래프가 나오고, 결과는 양쪽 이력에 저장됩니다.
 
 화면 구성:
 
@@ -77,7 +76,7 @@ build.bat       # Windows
 | CSV | 구간·스트림별 원본 수치. 엑셀에서 한글이 깨지지 않도록 UTF-8 BOM 포함 |
 | JSON | 전체 결과 원본 |
 
-GUI 옵션: `ttest gui -web 127.0.0.1:8080 -p 5210 -results <폴더> -no-browser -no-server`
+GUI 옵션: `ttest gui -p 5210 -listen -results <폴더> -browser -no-browser`
 
 ## 명령줄 사용법
 

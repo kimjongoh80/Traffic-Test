@@ -19,6 +19,7 @@ import (
 // Record is one saved test: the engine result plus criteria and verdict.
 type Record struct {
 	ID        string          `json:"id"`
+	Role      string          `json:"role,omitempty"` // client or server
 	CreatedAt time.Time       `json:"created_at"`
 	Target    string          `json:"target"`
 	Stopped   bool            `json:"stopped,omitempty"`
@@ -30,6 +31,7 @@ type Record struct {
 // RecordInfo is the short form used by the history list.
 type RecordInfo struct {
 	ID          string    `json:"id"`
+	Role        string    `json:"role,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	Target      string    `json:"target"`
 	Protocol    string    `json:"protocol"`
@@ -45,7 +47,7 @@ type RecordInfo struct {
 }
 
 func (r *Record) info() RecordInfo {
-	ri := RecordInfo{ID: r.ID, CreatedAt: r.CreatedAt, Target: r.Target, Stopped: r.Stopped,
+	ri := RecordInfo{ID: r.ID, Role: r.Role, CreatedAt: r.CreatedAt, Target: r.Target, Stopped: r.Stopped,
 		Evaluated: r.Verdict.Evaluated, Pass: r.Verdict.Pass}
 	if r.Result != nil {
 		p, s := r.Result.Params, r.Result.Summary

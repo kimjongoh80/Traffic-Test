@@ -22,14 +22,14 @@ import (
 )
 
 // version is overridden at build time with -ldflags "-X main.version=..."
-var version = "0.4.0"
+var version = "0.5.0"
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Traffic-Test %s - network traffic stress test
 
 Usage:
   ttest                         start the web GUI (same as "ttest gui")
-  ttest gui [options]           web GUI in the browser; also runs the test server
+  ttest gui [options]           app window (Server/Client mode)
   ttest server [options]        run on the PC at one end of the device under test
   ttest client -c HOST [opts]   run on the PC at the other end
 
@@ -65,13 +65,14 @@ func runGUI(args []string) {
 	fs := flag.NewFlagSet("gui", flag.ExitOnError)
 	web := fs.String("web", "127.0.0.1:8080", "address of the web GUI (use 0.0.0.0:8080 to allow remote browsers)")
 	port := fs.Int("p", engine.DefaultPort, "test server port")
-	noServer := fs.Bool("no-server", false, "do not start the test server automatically")
-	noBrowser := fs.Bool("no-browser", false, "do not open the browser")
+	listen := fs.Bool("listen", false, "start the test server (Server mode) immediately")
+	noBrowser := fs.Bool("no-browser", false, "do not open any window (headless, use the printed URL)")
+	browser := fs.Bool("browser", false, "open in the default browser instead of the app window")
 	dir := fs.String("results", "", "folder for saved results (default: results next to the program)")
 	_ = fs.Parse(args)
 	err := gui.Run(gui.Options{
-		WebAddr: *web, ServerPort: *port, StartServer: !*noServer,
-		OpenBrowser: !*noBrowser, ResultsDir: *dir, Version: version,
+		WebAddr: *web, ServerPort: *port, StartServer: *listen,
+		OpenBrowser: !*noBrowser, Browser: *browser, ResultsDir: *dir, Version: version,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)

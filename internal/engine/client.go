@@ -31,7 +31,8 @@ func RunClient(ctx context.Context, host string, port int, p TestParams, onInter
 		return nil, err
 	}
 	cc := newCtrlConn(raw)
-	if err := cc.send(ctrlMsg{Type: "start", Version: ProtocolVersion, Params: &p}); err != nil {
+	clientHost, _ := os.Hostname()
+	if err := cc.send(ctrlMsg{Type: "start", Version: ProtocolVersion, Params: &p, Hostname: clientHost}); err != nil {
 		return nil, err
 	}
 	ready, err := cc.recv(10 * time.Second)
@@ -46,7 +47,6 @@ func RunClient(ctx context.Context, host string, port int, p TestParams, onInter
 		return nil, fmt.Errorf("bad session id")
 	}
 
-	clientHost, _ := os.Hostname()
 	res := &Result{Params: p, Server: addr, ServerHost: ready.Hostname, ClientHost: clientHost}
 	clientReceives := p.Reverse
 
@@ -152,6 +152,8 @@ func RunClient(ctx context.Context, host string, port int, p TestParams, onInter
 		if onInterval != nil {
 			onInterval(iv)
 		}
+		// Mirror to the server so its screen can follow the test.
+		_ = cc.send(ctrlMsg{Type: "client_interval", Interval: &iv})
 	}
 
 	// Control reader: interval reports and the final result from the server.
@@ -266,6 +268,7 @@ wait:
 		sender, receiver = group.totals(), remote
 	}
 	summarize(res, sender, receiver)
+	_ = cc.send(ctrlMsg{Type: "report", Result: res})
 	return res, nil
 }
 

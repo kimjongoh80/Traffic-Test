@@ -148,3 +148,38 @@ func TestBusyServer(t *testing.T) {
 	}
 	<-done
 }
+
+func TestServerHooks(t *testing.T) {
+	port := freePort(t)
+	var started TestInfo
+	var ivs int
+	ended := make(chan *Result, 1)
+	srv := &Server{Port: port, Bind: "127.0.0.1",
+		OnStart:    func(ti TestInfo) { started = ti },
+		OnInterval: func(id string, iv Interval) { ivs++ },
+		OnEnd:      func(id string, r *Result, err error) { ended <- r },
+	}
+	go srv.ListenAndServe()
+	defer srv.Close()
+	time.Sleep(200 * time.Millisecond)
+	crit := &Criteria{MinBitsPerSec: 1}
+	_, err := RunClient(context.Background(), "127.0.0.1", port,
+		TestParams{Protocol: "udp", Reverse: true, DurationSec: 1.5, Bandwidth: 20e6, Criteria: crit}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case r := <-ended:
+		if r == nil || r.Summary.Bytes == 0 {
+			t.Fatalf("server got no result: %+v", r)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("OnEnd not called")
+	}
+	if started.ID == "" || started.ClientHost == "" || started.Params.Criteria == nil {
+		t.Errorf("bad start info %+v", started)
+	}
+	if ivs < 2 {
+		t.Errorf("server saw %d intervals", ivs)
+	}
+}

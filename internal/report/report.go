@@ -144,11 +144,11 @@ func HTML(w io.Writer, in Input) error {
 		Started:   r.StartedAt.Local().Format("2006-01-02 15:04:05"),
 		Intervals: r.Intervals,
 	}
-	client, server := nz(r.ClientHost, "시험 PC"), nz(r.ServerHost, "상대 PC")
+	client, server := nz(r.ClientHost, "Client PC")+" (Client)", nz(r.ServerHost, "Server PC")+" (Server)"
 	if p.Reverse {
-		v.Sender, v.Receiver, v.Mode = server, client, "Client (시험 PC가 수신)"
+		v.Sender, v.Receiver, v.Mode = server, client, "Server 송신 → Client 수신"
 	} else {
-		v.Sender, v.Receiver, v.Mode = client, server, "Server (시험 PC가 송신)"
+		v.Sender, v.Receiver, v.Mode = client, server, "Client 송신 → Server 수신"
 	}
 	target := "최대"
 	if p.Bandwidth > 0 {
@@ -160,7 +160,7 @@ func HTML(w io.Writer, in Input) error {
 	}
 	v.Info = []kv{
 		{"송신 PC → 수신 PC", v.Sender + " → " + v.Receiver},
-		{"상대 PC 주소", in.Target},
+		{"연결 대상", in.Target},
 		{"Mode", v.Mode},
 		{"프로토콜", strings.ToUpper(p.Protocol)},
 		{"병렬 스트림", fmt.Sprint(p.Streams)},

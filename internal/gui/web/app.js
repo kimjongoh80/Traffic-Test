@@ -59,7 +59,12 @@
   };
   document.querySelectorAll('.seg').forEach(el => el.addEventListener('click', e => {
     if (e.target.tagName !== 'BUTTON') return;
+    if (el.id === 'mode' && view && view.live) { toast('테스트가 끝난 뒤 Mode를 바꿀 수 있습니다.'); return; }
     seg(el.id, e.target.dataset.v);
+    if (el.id === 'mode') {
+      applyMode();
+      if (isClientMode() && state.server && state.server.running) api('/api/server/stop', {}).catch(() => { });
+    }
     if (el.id === 'proto') {
       // buffer sizes do not carry over between TCP and UDP
       const len = parseInt($('length').value, 10);
@@ -69,16 +74,26 @@
     updateFormHints(); saveForm();
   }));
   const isClientMode = () => seg('mode') === 'client';
+  function applyMode() {
+    const client = isClientMode();
+    $('serverPane').hidden = client;
+    $('clientPane').hidden = !client;
+    $('formErr').textContent = '';
+    if (!view || (!view.live && !view.record)) {
+      $('stateSub').textContent = client
+        ? 'Server PC에서 서버를 시작한 뒤, Server 주소를 입력하고 테스트 시작을 누르세요.'
+        : '서버 시작을 누르면 Client PC가 테스트를 시작할 때까지 트래픽 없이 대기합니다.';
+    }
+  }
 
   function updateFormHints() {
     const udp = seg('proto') === 'udp';
     $('bwHint').textContent = udp ? '비우면 1 Gbps' : '비우면 최대 속도';
     $('lenLabel').textContent = udp ? '패킷 크기 (바이트)' : '버퍼 크기 (바이트)';
     $('length').placeholder = udp ? '1460' : '128K';
-    $('modeHint').textContent = isClientMode() ? '상대 PC가 이 PC로 트래픽을 보냅니다' : '이 PC가 상대 PC로 트래픽을 보냅니다';
   }
 
-  const formFields = ['host', 'port', 'duration', 'streams', 'bw', 'bwUnit', 'length', 'latency', 'cBw', 'cLoss', 'cRtt', 'cJit'];
+  const formFields = ['srvPort', 'host', 'port', 'duration', 'streams', 'bw', 'bwUnit', 'length', 'latency', 'cBw', 'cLoss', 'cRtt', 'cJit'];
   function saveForm() {
     const f = { proto: seg('proto'), mode: seg('mode') };
     formFields.forEach(k => f[k] = $(k).value);
@@ -119,7 +134,7 @@
     const num = id => { const v = parseFloat($(id).value); return isFinite(v) ? v : 0; };
     const params = {
       protocol: seg('proto'),
-      reverse: isClientMode(), // Client = this PC receives (peer sends)
+      reverse: true, // the Server PC sends, this Client PC receives
       duration_sec: num('duration') || 10,
       streams: Math.max(1, Math.round(num('streams')) || 1),
       bandwidth: Math.round(num('bw') * parseFloat($('bwUnit').value)),
@@ -334,8 +349,10 @@
 
   function setProgress(f) { $('progressBar').style.width = Math.max(0, Math.min(1, f)) * 100 + '%'; }
 
-  const dirLabel = p => p.reverse ? 'Client 모드 (상대 → 이 PC)' : 'Server 모드 (이 PC → 상대)';
-  const describe = p => `${p.protocol.toUpperCase()} · ${dirLabel(p)} · 스트림 ${p.streams} · ${p.duration_sec}초` + (p.bandwidth ? ` · 목표 ${fmtBits(p.bandwidth)}` : '');
+  const dirLabel = (p, role) => role === 'server'
+    ? (p.reverse ? 'Server 모드 · 이 PC → Client' : 'Server 모드 · Client → 이 PC')
+    : (p.reverse ? 'Client 모드 · Server → 이 PC' : 'Client 모드 · 이 PC → Server');
+  const describe = (p, role) => `${p.protocol.toUpperCase()} · ${dirLabel(p, role)} · 스트림 ${p.streams} · ${p.duration_sec}초` + (p.bandwidth ? ` · 목표 ${fmtBits(p.bandwidth)}` : '');
 
   const CHECK_NAMES = { bandwidth: '평균 대역폭', loss: '패킷 손실률', rtt: '평균 RTT', jitter: '지터' };
 
@@ -345,7 +362,7 @@
     setProgress(1);
     const r = rec.result, s = r.summary, udp = r.params.protocol === 'udp';
     $('stateText').textContent = rec.stopped ? '중지됨 (부분 결과)' : '테스트 완료';
-    $('stateSub').textContent = `${rec.target} · ${describe(r.params)} · ${fmtTime(rec.created_at)}`;
+    $('stateSub').textContent = `${rec.target} · ${describe(r.params, rec.role)} · ${fmtTime(rec.created_at)}`;
     const v = rec.verdict, vd = $('verdict');
     vd.hidden = false;
     vd.className = 'verdict ' + (!v.evaluated ? 'none' : v.pass ? 'pass' : 'fail');
@@ -391,7 +408,7 @@
       const total = view.params.duration_sec;
       setProgress(el / total);
       const rem = Math.max(0, total - el);
-      $('stateSub').textContent = `${view.target} · ${describe(view.params)} · 남은 시간 ${rem.toFixed(0)}초`;
+      $('stateSub').textContent = `${view.target} · ${describe(view.params, view.role)} · 남은 시간 ${rem.toFixed(0)}초`;
     }, 250);
   }
   function stopLiveTimer() { clearInterval(liveTimer); liveTimer = null; }
@@ -406,9 +423,11 @@
   function beginLive(lt) {
     resetView(lt.id, lt.params, lt.criteria, lt.started_at, true);
     view.target = lt.target;
-    $('stateText').textContent = '테스트 진행 중';
+    view.role = lt.role;
+    $('stateText').textContent = lt.role === 'server' ? 'Client 요청으로 트래픽 송신 중' : '테스트 진행 중';
     (lt.intervals || []).forEach(addInterval);
-    setRunning(true);
+    if (lt.role === 'server') renderServer(state.server || {});
+    else setRunning(true);
     startLiveTimer();
   }
 
@@ -433,11 +452,17 @@
     }
   };
 
-  $('srvToggle').onclick = async () => {
+  $('srvStartBtn').onclick = async () => {
+    $('formErr').textContent = '';
     try {
-      if (state.server && state.server.running) await api('/api/server/stop', {});
-      else await api('/api/server/start', { port: state.server ? state.server.port : 5210 });
-    } catch (e) { toast('연결 대기: ' + e.message); }
+      if (state.server && state.server.running) {
+        if (view && view.live && view.role === 'server') { toast('Client의 테스트가 끝난 뒤 서버를 중지할 수 있습니다.'); return; }
+        await api('/api/server/stop', {});
+      } else {
+        await api('/api/server/start', { port: parseInt($('srvPort').value, 10) || 5210 });
+      }
+    } catch (e) { $('formErr').textContent = '서버: ' + e.message; }
+    saveForm();
     refreshStatus();
   };
 
@@ -458,9 +483,23 @@
   const state = { server: null };
   function renderServer(s) {
     state.server = s;
+    const serving = view && view.live && view.role === 'server';
     $('srvDot').className = 'dot ' + (s.running ? 'on' : 'off');
-    $('srvText').textContent = s.running ? `연결 대기 중 (포트 ${s.port})` : (s.error ? `연결 대기 꺼짐: ${s.error}` : '연결 대기 꺼짐');
-    $('srvToggle').textContent = s.running ? '대기 끄기' : '대기 켜기';
+    $('srvText').textContent = s.running ? `서버 실행 중 (포트 ${s.port})` : '서버 꺼짐';
+    const b = $('srvStartBtn');
+    b.textContent = s.running ? '서버 중지' : '서버 시작';
+    b.className = 'btn big ' + (s.running ? 'danger' : 'primary');
+    const st = $('srvState');
+    st.className = 'srv-state' + (serving ? ' busy' : s.running ? ' on' : '');
+    st.textContent = serving ? `${view.target}로 트래픽 송신 중`
+      : s.running ? `Client 연결 대기 중 (포트 ${s.port}). Client PC에서 테스트를 시작하면 트래픽을 보냅니다.`
+      : (s.error ? `서버 시작 실패: ${s.error}` : '서버가 꺼져 있습니다.');
+  }
+
+  function renderAddrs(list) {
+    const v4 = list.filter(a => !a.includes(':')), v6 = list.filter(a => a.includes(':'));
+    const row = (a, cls) => { const m = a.match(/^(\S+) \((.*)\)$/) || [a, a, '']; return `<div class="${cls}"><b>${esc(m[1])}</b><span>${esc(m[2])}</span></div>`; };
+    $('ipList').innerHTML = list.length ? v4.map(a => row(a, '')).join('') + v6.map(a => row(a, 'v6')).join('') : '<span class="muted">네트워크 연결 없음</span>';
   }
 
   async function refreshStatus() {
@@ -468,7 +507,8 @@
       const st = await api('/api/status');
       $('hostname').textContent = st.hostname;
       $('version').textContent = 'v' + st.version;
-      $('addrs').textContent = (st.addresses || []).join('  ·  ');
+      $('addrs').textContent = (st.addresses || []).filter(a => !a.includes(':')).join('  ·  ');
+      renderAddrs(st.addresses || []);
       $('resultsDir').textContent = '저장 위치: ' + st.results_dir;
       renderServer(st.server);
       if (st.live && (!view || view.id !== st.live.id)) beginLive(st.live);
@@ -484,7 +524,7 @@
     tb.innerHTML = list.map(r => {
       const tag = !r.evaluated ? '<span class="tag none">-</span>' : r.pass ? '<span class="tag pass">PASS</span>' : '<span class="tag fail">FAIL</span>';
       return `<tr data-id="${esc(r.id)}"><td>${fmtTime(r.created_at)}${r.stopped ? ' <span class="muted small">(중지)</span>' : ''}</td><td>${esc(r.target)}</td>` +
-        `<td>${r.protocol.toUpperCase()} ${r.reverse ? 'Client' : 'Server'} ×${r.streams} · ${r.duration_sec.toFixed(0)}s</td>` +
+        `<td>${r.protocol.toUpperCase()} ${r.role === 'server' ? 'Server(송신)' : 'Client(수신)'} ×${r.streams} · ${r.duration_sec.toFixed(0)}s</td>` +
         `<td>${fmtBits(r.bits_per_sec, true)}</td><td>${r.protocol === 'udp' ? fmtPct(r.loss_pct || 0) : '-'}</td><td>${r.rtt_ms ? fmtMs(r.rtt_ms) : '-'}</td>` +
         `<td>${tag}</td><td><a class="link" href="/api/results/${esc(r.id)}/report" target="_blank">보기</a> · <a class="link" href="/api/results/${esc(r.id)}/csv">CSV</a></td>` +
         `<td><button class="icon-btn" data-del="${esc(r.id)}" title="삭제">✕</button></td></tr>`;
@@ -518,6 +558,7 @@
   function showRecord(rec) {
     const r = rec.result;
     resetView(rec.id, r.params, rec.criteria, rec.created_at, false);
+    view.role = rec.role || 'client';
     r.intervals.forEach(addInterval);
     finishView(rec);
   }
@@ -536,6 +577,7 @@
     on('interval', m => { if (view && view.id === m.id && view.live) addInterval(m.interval); });
     on('test_done', rec => {
       setRunning(false);
+      setTimeout(() => renderServer(state.server || {}), 0);
       if (view && view.id === rec.id) finishView(rec);
       refreshHistory();
     });
@@ -543,6 +585,7 @@
       setRunning(false);
       if (view && view.id === m.id) {
         view.live = false; stopLiveTimer();
+        renderServer(state.server || {});
         $('stateText').textContent = '테스트 실패';
         $('stateSub').textContent = m.error;
       }
@@ -554,6 +597,7 @@
 
   // ---------- init ----------
   loadForm();
+  applyMode();
   updateFormHints();
   buildTableHeads(seg('proto') === 'udp');
   renderStreams();

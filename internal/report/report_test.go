@@ -33,7 +33,7 @@ func TestHTML(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := b.String()
-	for _, want := range []string{"트래픽 스트레스 테스트 보고서", "PASS", "pc-a → pc-b", "<svg", "구간별 결과"} {
+	for _, want := range []string{"트래픽 스트레스 테스트 보고서", "PASS", "pc-a (Client) → pc-b (Server)", "<svg", "구간별 결과"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("report missing %q", want)
 		}

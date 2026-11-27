@@ -34,6 +34,9 @@ type TestParams struct {
 	Length      int     `json:"length"`       // TCP write size / UDP payload size in bytes
 	IntervalSec float64 `json:"interval_sec"` // report interval in seconds
 	LatencyMs   int     `json:"latency_ms"`   // latency probe interval in ms, 0 = disabled
+	// Criteria travel with the test so the server side can show the same
+	// pass/fail limits. Optional.
+	Criteria *Criteria `json:"criteria,omitempty"`
 }
 
 // Normalize fills defaults and validates the parameters.
@@ -100,6 +103,7 @@ type ctrlMsg struct {
 	Interval *Interval       `json:"interval,omitempty"`
 	Totals   []StreamTotals  `json:"totals,omitempty"`
 	Hostname string          `json:"hostname,omitempty"`
+	Result   *Result         `json:"result,omitempty"`
 	Extra    json.RawMessage `json:"extra,omitempty"`
 }
 

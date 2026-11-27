@@ -33,7 +33,8 @@ type Options struct {
 	WebAddr     string // e.g. 127.0.0.1:8080
 	ServerPort  int    // ttest server port to listen on
 	StartServer bool   // start the test server immediately
-	OpenBrowser bool
+	OpenBrowser bool   // show the GUI (app window, or browser as fallback)
+	Browser     bool   // use the default browser instead of an app window
 	ResultsDir  string
 	Version     string
 }
@@ -50,13 +51,15 @@ type App struct {
 	srvPort int
 	srvErr  string
 
-	testMu sync.Mutex
-	live   *liveTest
-	cancel context.CancelFunc
+	testMu     sync.Mutex
+	live       *liveTest
+	cancel     context.CancelFunc
+	serverLive map[string]*liveTest
 }
 
 type liveTest struct {
 	ID        string            `json:"id"`
+	Role      string            `json:"role"` // "client": started here; "server": started by the peer
 	Target    string            `json:"target"`
 	Params    engine.TestParams `json:"params"`
 	Criteria  engine.Criteria   `json:"criteria"`
@@ -104,10 +107,31 @@ func Run(opt Options) error {
 			fmt.Println("test server not started:", err)
 		}
 	}
-	if opt.OpenBrowser {
-		go openBrowser(url)
+	if !opt.OpenBrowser {
+		return http.Serve(ln, a.routes())
 	}
-	return http.Serve(ln, a.routes())
+	errCh := make(chan error, 1)
+	go func() { errCh <- http.Serve(ln, a.routes()) }()
+	if !opt.Browser && openWindow(url) {
+		// The app window was closed: stop everything.
+		a.shutdown()
+		return nil
+	}
+	go openBrowser(url)
+	return <-errCh
+}
+
+func (a *App) shutdown() {
+	a.testMu.Lock()
+	if a.cancel != nil {
+		a.cancel()
+	}
+	a.testMu.Unlock()
+	a.srvMu.Lock()
+	if a.srv != nil {
+		a.srv.Close()
+	}
+	a.srvMu.Unlock()
 }
 
 func runningInstance(addr string) (string, bool) {
@@ -289,7 +313,8 @@ func (a *App) startServer(port int) error {
 		a.srvMu.Unlock()
 		return errors.New("server already running")
 	}
-	srv := &engine.Server{Port: port, Logger: log.New(logWriter{a}, "", 0)}
+	srv := &engine.Server{Port: port, Logger: log.New(logWriter{a}, "", 0),
+		OnStart: a.serverTestStart, OnInterval: a.serverTestInterval, OnEnd: a.serverTestEnd}
 	a.srv, a.srvPort, a.srvErr = srv, port, ""
 	a.srvMu.Unlock()
 
@@ -387,8 +412,9 @@ func (a *App) handleTestStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+	req.Params.Criteria = &req.Criteria
 	lt := &liveTest{
-		ID: newID(), Target: net.JoinHostPort(req.Host, fmt.Sprint(req.Port)),
+		ID: newID(), Role: "client", Target: net.JoinHostPort(req.Host, fmt.Sprint(req.Port)),
 		Params: req.Params, Criteria: req.Criteria, StartedAt: time.Now(),
 	}
 	a.live, a.cancel = lt, cancel
@@ -414,10 +440,78 @@ func (a *App) runTest(ctx context.Context, lt *liveTest, req startReq) {
 		return
 	}
 	rec := &Record{
-		ID: lt.ID, CreatedAt: lt.StartedAt, Target: lt.Target,
+		ID: lt.ID, Role: "client", CreatedAt: lt.StartedAt, Target: lt.Target,
 		Result: res, Criteria: req.Criteria, Verdict: engine.Evaluate(res, req.Criteria),
 	}
 	if ctx.Err() != nil {
+		rec.Stopped = true
+	}
+	if err := a.store.save(rec); err != nil {
+		log.Printf("saving result: %v", err)
+	}
+	a.hub.publish("test_done", rec)
+}
+
+// ---- tests started by the peer on this PC's server ----
+
+func (a *App) serverTestStart(ti engine.TestInfo) {
+	crit := engine.Criteria{}
+	if ti.Params.Criteria != nil {
+		crit = *ti.Params.Criteria
+	}
+	target := ti.Remote
+	if ti.ClientHost != "" {
+		target = ti.ClientHost + " (" + ti.Remote + ")"
+	}
+	lt := &liveTest{ID: newID(), Role: "server", Target: target, Params: ti.Params, Criteria: crit, StartedAt: ti.StartedAt}
+	a.testMu.Lock()
+	if a.live == nil {
+		a.live = lt
+	}
+	a.serverLive = map[string]*liveTest{ti.ID: lt}
+	a.testMu.Unlock()
+	a.hub.publish("test_start", lt)
+}
+
+func (a *App) serverLiveFor(engineID string) *liveTest {
+	a.testMu.Lock()
+	defer a.testMu.Unlock()
+	return a.serverLive[engineID]
+}
+
+func (a *App) serverTestInterval(engineID string, iv engine.Interval) {
+	lt := a.serverLiveFor(engineID)
+	if lt == nil {
+		return
+	}
+	a.testMu.Lock()
+	lt.Intervals = append(lt.Intervals, iv)
+	a.testMu.Unlock()
+	a.hub.publish("interval", map[string]any{"id": lt.ID, "interval": iv})
+}
+
+func (a *App) serverTestEnd(engineID string, res *engine.Result, err error) {
+	lt := a.serverLiveFor(engineID)
+	a.testMu.Lock()
+	if a.live == lt {
+		a.live = nil
+	}
+	delete(a.serverLive, engineID)
+	a.testMu.Unlock()
+	if lt == nil {
+		return
+	}
+	if err != nil || res == nil {
+		msg := "테스트가 비정상 종료되었습니다"
+		if err != nil {
+			msg = err.Error()
+		}
+		a.hub.publish("test_error", map[string]any{"id": lt.ID, "error": msg})
+		return
+	}
+	rec := &Record{ID: lt.ID, Role: "server", CreatedAt: lt.StartedAt, Target: lt.Target,
+		Result: res, Criteria: lt.Criteria, Verdict: engine.Evaluate(res, lt.Criteria)}
+	if res.Summary.DurationSec+0.5 < res.Params.DurationSec {
 		rec.Stopped = true
 	}
 	if err := a.store.save(rec); err != nil {
@@ -446,11 +540,7 @@ func (a *App) handleQuit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]bool{"ok": true})
 	go func() {
 		time.Sleep(300 * time.Millisecond)
-		a.srvMu.Lock()
-		if a.srv != nil {
-			a.srv.Close()
-		}
-		a.srvMu.Unlock()
+		a.shutdown()
 		fmt.Println("Traffic-Test stopped from the web page.")
 		os.Exit(0)
 	}()
