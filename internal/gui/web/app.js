@@ -160,6 +160,40 @@
     loss: new LineChart($('chLoss'), { series: [{ name: '손실률', color: '--s4' }], yFormat: (v, tip) => tip ? fmtPct(v) : +v.toFixed(3) + '%' }),
   };
 
+  // ---------- theme and UI size ----------
+  // The UI is drawn at 70% of its design size when the window is 1440 px wide
+  // or more, and shrinks with the window below that. The size menu multiplies it.
+  const BASE_ZOOM = 0.7, REF_WIDTH = 1440;
+  const ui = { theme: store.get('theme', 'system'), scale: store.get('scale', 1) };
+  function applyView() {
+    const root = document.documentElement;
+    if (ui.theme === 'light' || ui.theme === 'dark') root.dataset.theme = ui.theme; else delete root.dataset.theme;
+    const w = window.innerWidth || REF_WIDTH;
+    const z = Math.min(1.6, Math.max(0.4, BASE_ZOOM * ui.scale * Math.min(1, w / REF_WIDTH)));
+    root.style.zoom = z;
+    const eff = w / z; // layout width in CSS px after zoom
+    root.classList.toggle('w-narrow', eff < 900);
+    root.classList.toggle('w-mid', eff >= 900 && eff < 1250);
+    $('themeSel').value = ui.theme;
+    $('scaleSel').value = String(ui.scale);
+    requestAnimationFrame(() => Object.values(charts).forEach(c => c.draw()));
+  }
+  function saveView() {
+    store.set('theme', ui.theme); store.set('scale', ui.scale);
+    api('/api/settings', { theme: ui.theme, ui_scale: ui.scale }).catch(() => { });
+  }
+  $('themeSel').addEventListener('change', e => { ui.theme = e.target.value; applyView(); saveView(); });
+  $('scaleSel').addEventListener('change', e => { ui.scale = parseFloat(e.target.value) || 1; applyView(); saveView(); });
+  let resizeRaf = 0;
+  window.addEventListener('resize', () => { cancelAnimationFrame(resizeRaf); resizeRaf = requestAnimationFrame(applyView); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyView);
+  applyView();
+  api('/api/settings').then(st => {
+    ui.theme = st.theme || 'system'; ui.scale = st.ui_scale || 1;
+    store.set('theme', ui.theme); store.set('scale', ui.scale);
+    applyView();
+  }).catch(() => { });
+
   // ---------- view state ----------
   let view = null; // {id, params, criteria, intervals, startedAt, live, record}
   let liveTimer = null;
@@ -509,7 +543,7 @@
       $('version').textContent = 'v' + st.version;
       $('addrs').textContent = (st.addresses || []).filter(a => !a.includes(':')).join('  ·  ');
       renderAddrs(st.addresses || []);
-      $('resultsDir').textContent = '저장 위치: ' + st.results_dir;
+      if (document.activeElement !== $('resultsDir')) $('resultsDir').value = st.results_dir;
       renderServer(st.server);
       if (st.live && (!view || view.id !== st.live.id)) beginLive(st.live);
       if (!st.live && view && view.live) { setRunning(false); }
@@ -530,6 +564,28 @@
         `<td><button class="icon-btn" data-del="${esc(r.id)}" title="삭제">✕</button></td></tr>`;
     }).join('');
   }
+
+  // ---------- history folder ----------
+  async function setResultsDir(dir) {
+    try {
+      const r = await api('/api/results-dir', { dir });
+      $('resultsDir').value = r.results_dir;
+      toast('저장 위치를 바꿨습니다: ' + r.results_dir);
+      refreshHistory();
+    } catch (err) { toast(err.message, 6000); }
+  }
+  $('dirApplyBtn').addEventListener('click', () => setResultsDir($('resultsDir').value.trim()));
+  $('resultsDir').addEventListener('keydown', e => { if (e.key === 'Enter') setResultsDir(e.target.value.trim()); });
+  $('dirPickBtn').addEventListener('click', async () => {
+    const b = $('dirPickBtn');
+    b.disabled = true;
+    try {
+      const r = await api('/api/results-dir/pick', {});
+      if (r.dir) setResultsDir(r.dir);
+    } catch (err) { toast('폴더 선택 창을 열 수 없습니다. 경로를 직접 입력하고 적용을 누르세요.', 6000); }
+    finally { b.disabled = false; }
+  });
+  $('dirOpenBtn').addEventListener('click', () => api('/api/results-dir/open', {}).catch(err => toast(err.message)));
 
   $('historyTable').addEventListener('click', async e => {
     if (e.target.closest('a')) return;
@@ -568,6 +624,7 @@
     const es = new EventSource('/api/events');
     const on = (name, fn) => es.addEventListener(name, e => { try { fn(JSON.parse(e.data)); } catch (err) { console.error(err); } });
     on('server', renderServer);
+    on('history', () => { refreshHistory(); refreshStatus(); });
     on('log', m => {
       const el = $('log');
       el.textContent += `[${new Date(m.time).toLocaleTimeString('ko-KR', { hour12: false })}] ${m.message}\n`;

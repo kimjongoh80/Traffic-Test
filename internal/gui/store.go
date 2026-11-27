@@ -100,13 +100,29 @@ func defaultResultsDir() string {
 }
 
 func openStore(dir string) (*store, error) {
+	s := &store{}
+	if err := s.reopen(dir); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+// reopen points the store at another folder and loads the records there.
+func (s *store) reopen(dir string) error {
 	if dir == "" {
 		dir = defaultResultsDir()
 	}
+	dir = filepath.Clean(dir)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, err
+		return err
 	}
-	s := &store{dir: dir, infos: map[string]RecordInfo{}}
+	f, err := os.CreateTemp(dir, ".w")
+	if err != nil {
+		return err
+	}
+	f.Close()
+	os.Remove(f.Name())
+	infos := map[string]RecordInfo{}
 	files, _ := filepath.Glob(filepath.Join(dir, "*.json"))
 	for _, f := range files {
 		b, err := os.ReadFile(f)
@@ -115,17 +131,26 @@ func openStore(dir string) (*store, error) {
 		}
 		var r Record
 		if json.Unmarshal(b, &r) == nil && idRe.MatchString(r.ID) {
-			s.infos[r.ID] = r.info()
+			infos[r.ID] = r.info()
 		}
 	}
-	return s, nil
+	s.mu.Lock()
+	s.dir, s.infos = dir, infos
+	s.mu.Unlock()
+	return nil
+}
+
+func (s *store) Dir() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.dir
 }
 
 func (s *store) path(id string) (string, error) {
 	if !idRe.MatchString(id) {
 		return "", errors.New("invalid id")
 	}
-	return filepath.Join(s.dir, "ttest-"+id+".json"), nil
+	return filepath.Join(s.Dir(), "ttest-"+id+".json"), nil
 }
 
 func (s *store) save(r *Record) error {

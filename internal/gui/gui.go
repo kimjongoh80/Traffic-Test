@@ -84,7 +84,16 @@ func Run(opt Options) error {
 		}
 		return nil
 	}
-	st, err := openStore(opt.ResultsDir)
+	settings := loadSettings()
+	dir := opt.ResultsDir
+	if dir == "" {
+		dir = settings.ResultsDir
+	}
+	st, err := openStore(dir)
+	if err != nil && dir != opt.ResultsDir {
+		// The saved folder is gone (unplugged drive etc.): fall back to the default.
+		st, err = openStore(opt.ResultsDir)
+	}
 	if err != nil {
 		return err
 	}
@@ -208,6 +217,10 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("/api/test/start", a.post(a.handleTestStart))
 	mux.HandleFunc("/api/test/stop", a.post(a.handleTestStop))
 	mux.HandleFunc("/api/quit", a.post(a.handleQuit))
+	mux.HandleFunc("/api/settings", a.handleSettings)
+	mux.HandleFunc("/api/results-dir", a.post(a.handleResultsDir))
+	mux.HandleFunc("/api/results-dir/pick", a.post(a.handlePickDir))
+	mux.HandleFunc("/api/results-dir/open", a.post(a.handleOpenDir))
 	mux.HandleFunc("/api/results", a.handleResults)
 	mux.HandleFunc("/api/results/", a.handleResult)
 	return mux
@@ -292,7 +305,7 @@ func (a *App) handleStatus(w http.ResponseWriter, r *http.Request) {
 	a.testMu.Unlock()
 	writeJSON(w, 200, statusResp{
 		Version: a.opt.Version, Hostname: a.host, OS: runtime.GOOS + "/" + runtime.GOARCH,
-		Addresses: localAddrs(), Server: a.serverStatus(), Live: live, ResultsDir: a.store.dir,
+		Addresses: localAddrs(), Server: a.serverStatus(), Live: live, ResultsDir: a.store.Dir(),
 	})
 }
 

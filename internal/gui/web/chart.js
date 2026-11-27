@@ -37,8 +37,10 @@
       this.draw();
     }
     layout() {
-      const dpr = window.devicePixelRatio || 1;
       const w = this.c.clientWidth, h = this.c.clientHeight;
+      // Page zoom (UI size) changes the on-screen size; render at that resolution.
+      const rw = this.c.getBoundingClientRect().width;
+      const dpr = (window.devicePixelRatio || 1) * (w > 0 && rw > 0 ? rw / w : 1);
       if (this.c.width !== Math.round(w * dpr) || this.c.height !== Math.round(h * dpr)) {
         this.c.width = Math.round(w * dpr);
         this.c.height = Math.round(h * dpr);
@@ -126,7 +128,7 @@
     onMove(e) {
       if (!this.xs.length || !this._geom) return;
       const rect = this.c.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
+      const mx = (e.clientX - rect.left) * (rect.width > 0 ? this.c.clientWidth / rect.width : 1);
       const { X } = this._geom;
       let best = 0, bd = Infinity;
       this.xs.forEach((x, i) => { const d = Math.abs(X(x) - mx); if (d < bd) { bd = d; best = i; } });

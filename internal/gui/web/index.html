@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Traffic-Test</title>
 <link rel="stylesheet" href="app.css">
+<script>
+  // Apply the saved theme and size before the first paint to avoid a flash.
+  try {
+    var t = JSON.parse(localStorage.getItem('ttest.theme') || '"system"');
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
 </head>
 <body>
 <header class="topbar">
@@ -15,6 +22,21 @@
   <div class="hostinfo">
     <span class="muted">이 PC</span> <b id="hostname">-</b>
     <span id="addrs" class="addrs"></span>
+  </div>
+  <div class="view-ctl">
+    <label for="themeSel">테마</label>
+    <select id="themeSel" title="화면 색상">
+      <option value="system">시스템 설정</option>
+      <option value="light">라이트</option>
+      <option value="dark">다크</option>
+    </select>
+    <label for="scaleSel">크기</label>
+    <select id="scaleSel" title="화면 크기. 창 크기에 맞춰 자동으로 줄어들고, 여기서 전체 배율을 조절합니다.">
+      <option value="0.85">작게</option>
+      <option value="1">보통</option>
+      <option value="1.15">크게</option>
+      <option value="1.3">더 크게</option>
+    </select>
   </div>
   <div class="server-ctl">
     <span class="dot" id="srvDot"></span>
@@ -158,7 +180,14 @@
     </section>
 
     <section class="panel">
-      <h2>테스트 이력 <span class="muted small" id="resultsDir"></span></h2>
+      <h2>테스트 이력</h2>
+      <div class="dir-row">
+        <span>저장 위치</span>
+        <input id="resultsDir" spellcheck="false" placeholder="비워 두고 적용하면 기본 폴더를 씁니다" title="전체 경로를 입력하고 적용을 누르거나, 찾아보기로 폴더를 고르세요">
+        <button class="btn small" id="dirPickBtn">찾아보기…</button>
+        <button class="btn small" id="dirApplyBtn">적용</button>
+        <button class="btn small" id="dirOpenBtn" title="탐색기(Finder)에서 저장 폴더를 엽니다">폴더 열기</button>
+      </div>
       <div class="table-wrap"><table id="historyTable">
         <thead><tr><th>시작 시각</th><th>대상</th><th>방식</th><th>평균 대역폭</th><th>손실</th><th>RTT</th><th>판정</th><th>보고서</th><th></th></tr></thead>
         <tbody></tbody></table></div>
