@@ -164,13 +164,18 @@
   // The UI is drawn at 70% of its design size when the window is 1440 px wide
   // or more, and shrinks with the window below that. The size menu multiplies it.
   const BASE_ZOOM = 0.7, REF_WIDTH = 1440;
-  const ui = { theme: store.get('theme', 'system'), scale: store.get('scale', 1) };
+  const ui = { theme: store.get('theme', 'system'), scale: store.get('scale', 1), font: store.get('font', 1) };
+  const FONT_MIN = 0.7, FONT_MAX = 2, FONT_STEP = 0.1;
   function applyView() {
     const root = document.documentElement;
     if (ui.theme === 'light' || ui.theme === 'dark') root.dataset.theme = ui.theme; else delete root.dataset.theme;
     const w = window.innerWidth || REF_WIDTH;
     const z = Math.min(1.6, Math.max(0.4, BASE_ZOOM * ui.scale * Math.min(1, w / REF_WIDTH)));
     root.style.zoom = z;
+    root.style.setProperty('--fs', ui.font);
+    $('fontVal').textContent = Math.round(ui.font * 100) + '%';
+    $('fontDown').disabled = ui.font <= FONT_MIN + 1e-9;
+    $('fontUp').disabled = ui.font >= FONT_MAX - 1e-9;
     const eff = w / z; // layout width in CSS px after zoom
     root.classList.toggle('w-narrow', eff < 900);
     root.classList.toggle('w-mid', eff >= 900 && eff < 1250);
@@ -179,18 +184,22 @@
     requestAnimationFrame(() => Object.values(charts).forEach(c => c.draw()));
   }
   function saveView() {
-    store.set('theme', ui.theme); store.set('scale', ui.scale);
-    api('/api/settings', { theme: ui.theme, ui_scale: ui.scale }).catch(() => { });
+    store.set('theme', ui.theme); store.set('scale', ui.scale); store.set('font', ui.font);
+    api('/api/settings', { theme: ui.theme, ui_scale: ui.scale, font_scale: ui.font }).catch(() => { });
   }
   $('themeSel').addEventListener('change', e => { ui.theme = e.target.value; applyView(); saveView(); });
   $('scaleSel').addEventListener('change', e => { ui.scale = parseFloat(e.target.value) || 1; applyView(); saveView(); });
+  const setFont = f => { ui.font = Math.round(Math.min(FONT_MAX, Math.max(FONT_MIN, f)) * 10) / 10; applyView(); saveView(); };
+  $('fontDown').addEventListener('click', () => setFont(ui.font - FONT_STEP));
+  $('fontUp').addEventListener('click', () => setFont(ui.font + FONT_STEP));
+  $('fontVal').addEventListener('click', () => setFont(1));
   let resizeRaf = 0;
   window.addEventListener('resize', () => { cancelAnimationFrame(resizeRaf); resizeRaf = requestAnimationFrame(applyView); });
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyView);
   applyView();
   api('/api/settings').then(st => {
-    ui.theme = st.theme || 'system'; ui.scale = st.ui_scale || 1;
-    store.set('theme', ui.theme); store.set('scale', ui.scale);
+    ui.theme = st.theme || 'system'; ui.scale = st.ui_scale || 1; ui.font = st.font_scale || 1;
+    store.set('theme', ui.theme); store.set('scale', ui.scale); store.set('font', ui.font);
     applyView();
   }).catch(() => { });
 

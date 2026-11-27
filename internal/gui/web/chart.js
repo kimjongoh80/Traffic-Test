@@ -3,6 +3,10 @@
   function cssVar(name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   }
+  function fontScale() {
+    const v = parseFloat(cssVar('--fs'));
+    return v > 0 ? v : 1;
+  }
   function niceStep(range, ticks) {
     const raw = range / ticks;
     const mag = Math.pow(10, Math.floor(Math.log10(raw)));
@@ -46,7 +50,8 @@
         this.c.height = Math.round(h * dpr);
       }
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return { w, h, l: 76, r: 12, t: 28, b: 28 };
+      const fs = fontScale();
+      return { w, h, l: Math.round(76 * fs), r: 12, t: Math.round(28 * fs), b: Math.round(28 * fs), fs };
     }
     yRange() {
       let max = 0, min = this.opts.yMin ?? 0;
@@ -69,7 +74,8 @@
       const Y = y => L.t + ph - ((y - yr.min) / (yr.max - yr.min)) * ph;
       this._geom = { L, X, xmax, pw };
 
-      ctx.font = '14px system-ui, sans-serif';
+      const fs = fontScale();
+      ctx.font = Math.round(14 * fs) + 'px system-ui, sans-serif';
       ctx.lineWidth = 1;
       ctx.textBaseline = 'middle';
       for (let v = yr.min; v <= yr.max + 1e-9; v += yr.step) {
@@ -115,8 +121,8 @@
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       let lx = L.l;
       this.opts.series.forEach(s => {
-        ctx.fillStyle = cssVar(s.color); ctx.fillRect(lx, 9, 12, 3);
-        ctx.fillStyle = muted; ctx.fillText(s.name, lx + 16, 11);
+        ctx.fillStyle = cssVar(s.color); ctx.fillRect(lx, Math.round(9 * fs), 12, 3);
+        ctx.fillStyle = muted; ctx.fillText(s.name, lx + 16, Math.round(11 * fs));
         lx += 26 + ctx.measureText(s.name).width;
       });
 

@@ -17,6 +17,7 @@ import (
 type Settings struct {
 	Theme      string  `json:"theme"`       // system, light or dark
 	UIScale    float64 `json:"ui_scale"`    // multiplier on top of the automatic size
+	FontScale  float64 `json:"font_scale"`  // text size multiplier
 	ResultsDir string  `json:"results_dir"` // empty = default folder
 }
 
@@ -31,7 +32,7 @@ func settingsPath() string {
 }
 
 func loadSettings() Settings {
-	s := Settings{Theme: "system", UIScale: 1}
+	s := Settings{Theme: "system", UIScale: 1, FontScale: 1}
 	if p := settingsPath(); p != "" {
 		if b, err := os.ReadFile(p); err == nil {
 			_ = json.Unmarshal(b, &s)
@@ -48,6 +49,9 @@ func (s Settings) clean() Settings {
 	}
 	if s.UIScale < 0.6 || s.UIScale > 1.6 {
 		s.UIScale = 1
+	}
+	if s.FontScale < 0.7 || s.FontScale > 2 {
+		s.FontScale = 1
 	}
 	return s
 }
@@ -78,8 +82,9 @@ func updateSettings(fn func(*Settings)) (Settings, error) {
 func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var req struct {
-			Theme   *string  `json:"theme"`
-			UIScale *float64 `json:"ui_scale"`
+			Theme     *string  `json:"theme"`
+			UIScale   *float64 `json:"ui_scale"`
+			FontScale *float64 `json:"font_scale"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), 400)
@@ -91,6 +96,9 @@ func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 			}
 			if req.UIScale != nil {
 				s.UIScale = *req.UIScale
+			}
+			if req.FontScale != nil {
+				s.FontScale = *req.FontScale
 			}
 		}); err != nil {
 			writeJSON(w, 500, map[string]string{"error": err.Error()})

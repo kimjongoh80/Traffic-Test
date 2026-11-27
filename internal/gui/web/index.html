@@ -10,6 +10,8 @@
   try {
     var t = JSON.parse(localStorage.getItem('ttest.theme') || '"system"');
     if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    var f = +JSON.parse(localStorage.getItem('ttest.font') || '1');
+    if (f > 0) document.documentElement.style.setProperty('--fs', f);
   } catch (e) {}
 </script>
 </head>
@@ -30,7 +32,13 @@
       <option value="light">라이트</option>
       <option value="dark">다크</option>
     </select>
-    <label for="scaleSel">크기</label>
+    <label>글자</label>
+    <span class="font-ctl" title="글자 크기 (화면 배율과 별개)">
+      <button id="fontDown" aria-label="글자 작게">A−</button>
+      <output id="fontVal" title="누르면 100%로 되돌립니다">100%</output>
+      <button id="fontUp" aria-label="글자 크게">A+</button>
+    </span>
+    <label for="scaleSel">화면</label>
     <select id="scaleSel" title="화면 크기. 창 크기에 맞춰 자동으로 줄어들고, 여기서 전체 배율을 조절합니다.">
       <option value="0.85">작게</option>
       <option value="1">보통</option>
