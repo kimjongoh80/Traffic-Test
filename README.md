@@ -4,7 +4,7 @@
 jperf/iperf를 참고했고, TCP·UDP 대역폭, 지연시간(RTT), 지터, 패킷 손실을 한 번에 측정합니다.
 목표 성능은 1G 기준, 25G까지 대응입니다. Windows와 macOS를 지원합니다.
 
-> 현재 단계: **1단계 측정 엔진(CLI)** 완료. 웹 GUI(2단계), 보고서 출력(3단계), 패키징(4단계) 예정.
+> 현재 단계: **1단계 측정 엔진(CLI)**, **2단계 웹 GUI** 완료. 보고서 출력(3단계), 패키징(4단계) 예정.
 
 ## 구성
 
@@ -27,7 +27,26 @@ build.bat       # Windows
 
 `dist/` 폴더에 `ttest-windows-amd64.exe`, `ttest-macos-arm64`, `ttest-macos-amd64`가 만들어집니다.
 
-## 사용법
+## 웹 GUI (기본)
+
+실행 파일을 **더블클릭**하거나 인수 없이 실행하면 웹 GUI가 열립니다.
+
+1. 장비 양쪽 PC에서 모두 Traffic-Test를 실행합니다. 실행하면 테스트 서버(포트 5210)가 자동으로 켜집니다.
+2. 한쪽 PC의 브라우저 화면에서 **상대 PC 주소**를 입력합니다. 화면 상단에 각 PC의 IP가 표시됩니다.
+3. 프리셋을 고르거나 프로토콜·방향·시간·스트림을 설정하고 **테스트 시작**을 누릅니다.
+
+화면 구성:
+
+- **실시간 지표**: 대역폭, 지연시간(RTT), 지터, 패킷 손실을 1초마다 갱신
+- **실시간 그래프 4개**: 합격 기준선이 빨간 점선으로 표시됩니다
+- **합격 기준**: 최소 대역폭, 최대 손실률, 최대 RTT, 최대 지터를 넣으면 테스트 후 PASS/FAIL 판정
+- **스트림별 결과**, **구간별 결과** 표
+- **테스트 이력**: 결과는 실행 파일 옆 `results` 폴더에 JSON으로 자동 저장되고, 클릭하면 다시 볼 수 있습니다
+- **서버 로그**: 상대 PC에서 이 PC로 들어온 테스트 기록
+
+GUI 옵션: `ttest gui -web 127.0.0.1:8080 -p 5210 -results <폴더> -no-browser -no-server`
+
+## 명령줄 사용법
 
 ```sh
 # PC A
@@ -101,8 +120,11 @@ ttest client -c 192.168.1.10 -R --json result.json
 ## 소스 구조
 
 ```
-cmd/ttest/          CLI 진입점
-internal/engine/    측정 엔진 (웹 GUI에서도 재사용)
+cmd/ttest/          진입점 (GUI / server / client)
+internal/gui/       웹 GUI 서버, 결과 저장소
+  web/              화면 (HTML/CSS/JS, 외부 라이브러리 없이 오프라인 동작)
+internal/engine/    측정 엔진 (CLI와 GUI가 공유)
+  criteria.go       합격/불합격 판정
   protocol.go       제어 프로토콜, 테스트 설정
   server.go         서버
   client.go         클라이언트, 결과 요약

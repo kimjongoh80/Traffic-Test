@@ -2,3 +2,4 @@
 *.exe
 /ttest
 *.json.out
+/results/

@@ -1,5 +1,7 @@
 // Command ttest is a traffic stress-test tool for network equipment.
 //
+//	ttest                (no arguments: start the web GUI)
+//	ttest gui [-web 127.0.0.1:8080]
 //	ttest server [-p 5210]
 //	ttest client -c <server> [-u] [-R] [-t 10] [-P 4] [-b 1G] [-l 1460] [--json out.json]
 package main
@@ -15,27 +17,32 @@ import (
 	"strings"
 
 	"github.com/kimjongoh80/Traffic-Test/internal/engine"
+	"github.com/kimjongoh80/Traffic-Test/internal/gui"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `Traffic-Test %s - network traffic stress test
 
 Usage:
+  ttest                         start the web GUI (same as "ttest gui")
+  ttest gui [options]           web GUI in the browser; also runs the test server
   ttest server [options]        run on the PC at one end of the device under test
   ttest client -c HOST [opts]   run on the PC at the other end
 
-Run "ttest server -h" or "ttest client -h" for options.
+Run "ttest gui -h", "ttest server -h" or "ttest client -h" for options.
 `, version)
 }
 
 func main() {
 	if len(os.Args) < 2 {
-		usage()
-		os.Exit(2)
+		runGUI(nil)
+		return
 	}
 	switch os.Args[1] {
+	case "gui":
+		runGUI(os.Args[2:])
 	case "server", "-s":
 		runServer(os.Args[2:])
 	case "client", "-c":
@@ -49,6 +56,24 @@ func main() {
 	default:
 		usage()
 		os.Exit(2)
+	}
+}
+
+func runGUI(args []string) {
+	fs := flag.NewFlagSet("gui", flag.ExitOnError)
+	web := fs.String("web", "127.0.0.1:8080", "address of the web GUI (use 0.0.0.0:8080 to allow remote browsers)")
+	port := fs.Int("p", engine.DefaultPort, "test server port")
+	noServer := fs.Bool("no-server", false, "do not start the test server automatically")
+	noBrowser := fs.Bool("no-browser", false, "do not open the browser")
+	dir := fs.String("results", "", "folder for saved results (default: results next to the program)")
+	_ = fs.Parse(args)
+	err := gui.Run(gui.Options{
+		WebAddr: *web, ServerPort: *port, StartServer: !*noServer,
+		OpenBrowser: !*noBrowser, ResultsDir: *dir, Version: version,
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error:", err)
+		os.Exit(1)
 	}
 }
 
