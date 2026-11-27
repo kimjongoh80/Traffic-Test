@@ -218,6 +218,7 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("/api/test/stop", a.post(a.handleTestStop))
 	mux.HandleFunc("/api/quit", a.post(a.handleQuit))
 	mux.HandleFunc("/api/settings", a.handleSettings)
+	mux.HandleFunc("/api/window/theme", a.post(a.handleWindowTheme))
 	mux.HandleFunc("/api/results-dir", a.post(a.handleResultsDir))
 	mux.HandleFunc("/api/results-dir/pick", a.post(a.handlePickDir))
 	mux.HandleFunc("/api/results-dir/open", a.post(a.handleOpenDir))

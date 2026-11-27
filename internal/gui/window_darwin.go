@@ -31,6 +31,15 @@ static void ttSetupMenu(void) {
 	[editItem setSubmenu:edit];
 	[NSApp setMainMenu:bar];
 }
+
+// ttSetAppearance: 0 follows the system, 1 light, 2 dark. It colors the
+// title bar and the rest of the native window chrome.
+static void ttSetAppearance(int mode) {
+	NSAppearance *a = nil;
+	if (mode == 1) a = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+	if (mode == 2) a = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+	[NSApp setAppearance:a];
+}
 */
 import "C"
 
@@ -45,9 +54,24 @@ func openWindow(url string) bool {
 	}
 	defer w.Destroy()
 	C.ttSetupMenu()
+	C.ttSetAppearance(appearanceMode(loadSettings().Theme))
+	setWindowTheme = func(theme string, dark bool) {
+		w.Dispatch(func() { C.ttSetAppearance(appearanceMode(theme)) })
+	}
+	defer func() { setWindowTheme = nil }()
 	w.SetTitle(windowTitle)
 	w.SetSize(windowWidth, windowHeight, webview.HintNone)
 	w.Navigate(url)
 	w.Run()
 	return true
+}
+
+func appearanceMode(theme string) C.int {
+	switch theme {
+	case "light":
+		return 1
+	case "dark":
+		return 2
+	}
+	return 0
 }

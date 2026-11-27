@@ -12,3 +12,8 @@ const (
 	windowWidth  = 1440
 	windowHeight = 940
 )
+
+// setWindowTheme recolors the native window frame (title bar) to match the
+// page theme. It is set while a native window is open; theme is system,
+// light or dark and dark is what the page is actually showing.
+var setWindowTheme func(theme string, dark bool)

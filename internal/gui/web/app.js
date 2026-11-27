@@ -182,6 +182,13 @@
     $('themeSel').value = ui.theme;
     $('scaleSel').value = String(ui.scale);
     requestAnimationFrame(() => Object.values(charts).forEach(c => c.draw()));
+    // Match the native title bar to what the page shows.
+    const dark = ui.theme === 'dark' || (ui.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const key = ui.theme + dark;
+    if (applyView.last !== key) {
+      applyView.last = key;
+      api('/api/window/theme', { theme: ui.theme, dark }).catch(() => { });
+    }
   }
   function saveView() {
     store.set('theme', ui.theme); store.set('scale', ui.scale); store.set('font', ui.font);

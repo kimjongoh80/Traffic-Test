@@ -200,3 +200,19 @@ if ($f.ShowDialog($o) -eq 'OK') { [Console]::OutputEncoding = [Text.Encoding]::U
 	}
 	return p, nil
 }
+
+// handleWindowTheme lets the page tell the native window which theme it shows.
+func (a *App) handleWindowTheme(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Theme string `json:"theme"`
+		Dark  bool   `json:"dark"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	if f := setWindowTheme; f != nil {
+		f(req.Theme, req.Dark)
+	}
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}
